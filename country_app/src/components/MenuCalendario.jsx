@@ -743,7 +743,7 @@ function MenuCalendario() {
         if (!localStorage.getItem('user')) return;
 
         try {
-          const response = await fetch(`http://localhost:3001/api/users/${userId}`);
+          const response = await fetch(`https://elrefugiocountryclub.com/api/api/users/${userId}`);
           if (!response.ok) return;
 
           const data = await response.json();
