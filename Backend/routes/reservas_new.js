@@ -1154,15 +1154,82 @@ router.post('/book', async (req, res) => {
       ]);
 
       if (candidatas.length > 0) {
+        // 🧠 SELECCIÓN CONSCIENTE DE ESCASEZ
+        // Para cada candidata, calcular su "criticidad": cuántas OTRAS clases
+        // quedarían SIN instructora en este mismo slot si la tomamos para la
+        // clase actual. Preferir candidatas con menor criticidad para no
+        // bloquear otras clases (p. ej. no llevarse al único instructor de
+        // avanzado si hay otra que puede dar la misma intermedio).
+        let pool0 = candidatas;
+        if (pool0.length > 1) {
+          for (const cand of pool0) {
+            const [otrasClases] = await db.query(
+              `SELECT clase_id FROM instructora_clase WHERE instructora_id = ? AND clase_id != ? AND activo = 1`,
+              [cand.instructora_id, clase_id]
+            );
+            let critica = 0;
+            for (const oc of otrasClases) {
+              const [alternativas] = await db.query(`
+                SELECT i.id
+                FROM instructoras i
+                JOIN instructora_clase ic ON i.id = ic.instructora_id AND ic.clase_id = ? AND ic.activo = 1
+                WHERE i.id != ?
+                  AND i.disponibilidad = 'disponible'
+                  AND (
+                    NOT EXISTS (
+                      SELECT 1 FROM instructora_horarios ih_check
+                      WHERE ih_check.instructora_id = i.id AND ih_check.activo = 1
+                    )
+                    OR EXISTS (
+                      SELECT 1 FROM instructora_horarios ih_match
+                      WHERE ih_match.instructora_id = i.id
+                        AND ih_match.dia_semana = ?
+                        AND ih_match.activo = 1
+                        AND ? >= ih_match.hora_inicio AND ? < ih_match.hora_fin
+                    )
+                  )
+                  AND i.id NOT IN (
+                    SELECT d.instructora_id FROM descansos d
+                    WHERE (
+                      (d.es_recurrente = 1 AND d.dia_semana = ?)
+                      OR (d.es_recurrente = 0 AND ? BETWEEN d.fecha_inicio AND d.fecha_fin)
+                    )
+                  )
+                  AND i.id NOT IN (
+                    SELECT r.instructora_id FROM reservas r
+                    WHERE r.fecha = ?
+                      AND r.hora_inicio = ?
+                      AND r.estatus IN ('pendiente','confirmada')
+                  )
+                LIMIT 1
+              `, [
+                oc.clase_id,
+                cand.instructora_id,
+                diaSemanaMySQL,
+                formatTimeForMySQL(hora_inicio),
+                formatTimeForMySQL(hora_inicio),
+                diaSemanaMySQL,
+                fechaMySQL,
+                fecha,
+                hora_inicio
+              ]);
+              if (alternativas.length === 0) critica++;
+            }
+            cand.criticidad = critica;
+          }
+          const minCritica = Math.min(...pool0.map(c => c.criticidad || 0));
+          pool0 = pool0.filter(c => (c.criticidad || 0) === minCritica);
+        }
+
         // 🎲 SELECCIÓN ALEATORIA para la primera reserva del horario
         // Filtrar instructoras sin clases consecutivas primero (prioridad)
-        const sinConsecutivas = candidatas.filter(c => c.clases_consecutivas === 0);
-        const pool = sinConsecutivas.length > 0 ? sinConsecutivas : candidatas;
-        
+        const sinConsecutivas = pool0.filter(c => c.clases_consecutivas === 0);
+        const pool = sinConsecutivas.length > 0 ? sinConsecutivas : pool0;
+
         // Seleccionar aleatoriamente del pool
         const randomIndex = Math.floor(Math.random() * pool.length);
         const instructoraSeleccionada = pool[randomIndex];
-        
+
         instructora_id = instructoraSeleccionada.instructora_id;
         // Primera reserva del horario - asignación aleatoria
       }
