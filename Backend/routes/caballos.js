@@ -361,7 +361,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Estatus inválido' });
     }
 
-    const especialidadesValidas = ['iniciacion', 'paseo', 'intermedio', 'salto'];
+    const especialidadesValidas = ['iniciacion', 'paseo', 'intermedio', 'avanzado', 'salto', 'mixto'];
     
     // Validar especialidades (puede ser string o array)
     let especialidadFinal = especialidad;
@@ -484,7 +484,7 @@ router.put('/:id', async (req, res) => {
     }
 
     if (especialidad) {
-      const especialidadesValidas = ['iniciacion', 'paseo', 'intermedio', 'salto'];
+      const especialidadesValidas = ['iniciacion', 'paseo', 'intermedio', 'avanzado', 'salto', 'mixto'];
       
       // Validar especialidades (puede ser string o array)
       let especialidadFinal = especialidad;
