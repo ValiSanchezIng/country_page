@@ -119,6 +119,20 @@ router.get('/disponibles', async (req, res) => {
 
     const especialidad = mapNivelToEspecialidad(nivel);
 
+    // Si el cliente es propietario y tiene al menos un caballo propio registrado,
+    // restringir el listado a SOLO sus caballos (no debe ver los del club).
+    let soloPropiosDeCliente = false;
+    if (cliente_id) {
+      const [[{ tieneCaballos } = { tieneCaballos: 0 }]] = await db.query(
+        `SELECT COUNT(*) AS tieneCaballos
+         FROM caballos c
+         JOIN usuarios u ON u.id = c.propietario_id
+         WHERE c.propietario_id = ? AND u.tipo_cliente = 'propietario'`,
+        [Number(cliente_id)]
+      );
+      soloPropiosDeCliente = Number(tieneCaballos) > 0;
+    }
+
     // Construir SQL parametrizado
     // Nota: usamos LIKE por si especialidad tiene valores combinados (ej. 'mixto,iniciacion').
     // Además tratamos 'mixto' como comodín: matchea cualquier nivel solicitado.
@@ -126,11 +140,15 @@ router.get('/disponibles', async (req, res) => {
       ? `AND (LOWER(c.especialidad) LIKE CONCAT('%', ?, '%') OR LOWER(c.especialidad) = 'mixto')`
       : '';
 
-    // Visibilidad de privados: un caballo con estatus='privado' solo debe aparecer si se
-    // indica cliente_id y coincide con su propietario. Sin cliente_id, se ocultan los privados.
-    const whereEstatus = cliente_id
-      ? `AND (c.estatus <> 'privado' OR c.propietario_id = ?)`
-      : `AND c.estatus <> 'privado'`;
+    // Visibilidad de caballos según el cliente:
+    // - Propietario con caballos propios: SOLO sus propios caballos (no ve los del club).
+    // - Cualquier otro cliente con cliente_id: caballos no-privados + los privados cuyo propietario sea él.
+    // - Sin cliente_id: se ocultan todos los privados.
+    const whereEstatus = soloPropiosDeCliente
+      ? `AND c.propietario_id = ?`
+      : (cliente_id
+          ? `AND (c.estatus <> 'privado' OR c.propietario_id = ?)`
+          : `AND c.estatus <> 'privado'`);
 
     const sql = `
       SELECT c.id, c.nombre, c.especialidad
