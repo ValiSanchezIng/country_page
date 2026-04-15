@@ -164,12 +164,16 @@ const verificarDisponibilidadInstructora = async (instructoraId, fecha, horaInic
     }
 
     // Verificar conflictos de horarios
+    // Nota: las clases de iniciacion/ponyclub NO bloquean a la instructora
+    // (puede atender otras clases en el mismo slot sin problema).
     const [conflictos] = await db.query(`
       SELECT r.id FROM reservas r
       JOIN instructoras i ON r.instructora_id = i.id
+      JOIN clases cl ON cl.id = r.clase_id
       WHERE r.instructora_id = ?
       AND r.fecha = ?
       AND r.estatus IN ('pendiente', 'confirmada')
+      AND LOWER(cl.nombre) NOT IN ('iniciacion', 'ponyclub')
       AND (
         (r.hora_inicio <= ? AND r.hora_fin > ?) OR
         (r.hora_inicio < ? AND r.hora_fin >= ?) OR
@@ -1137,9 +1141,11 @@ router.post('/book', async (req, res) => {
           )
           AND i.id NOT IN (
             SELECT r.instructora_id FROM reservas r
+            JOIN clases cl_blk ON cl_blk.id = r.clase_id
             WHERE r.fecha = ?
               AND r.hora_inicio = ?
               AND r.estatus IN ('pendiente','confirmada')
+              AND LOWER(cl_blk.nombre) NOT IN ('iniciacion','ponyclub')
           )
         ORDER BY clases_consecutivas ASC, reservas_semana ASC, i.id ASC
       `, [
@@ -1197,9 +1203,11 @@ router.post('/book', async (req, res) => {
                   )
                   AND i.id NOT IN (
                     SELECT r.instructora_id FROM reservas r
+                    JOIN clases cl_blk2 ON cl_blk2.id = r.clase_id
                     WHERE r.fecha = ?
                       AND r.hora_inicio = ?
                       AND r.estatus IN ('pendiente','confirmada')
+                      AND LOWER(cl_blk2.nombre) NOT IN ('iniciacion','ponyclub')
                   )
                 LIMIT 1
               `, [
