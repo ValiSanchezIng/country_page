@@ -39,11 +39,16 @@ const CaballosAdmin = () => {
   };
 
   // Funciones para manejar especialidades múltiples
-  const especialidadesDisponibles = ['iniciacion', 'paseo', 'intermedio', 'salto'];
+  const especialidadesDisponibles = ['iniciacion', 'paseo', 'intermedio', 'avanzado', 'salto'];
   
   const parseEspecialidades = (especialidadString) => {
     if (!especialidadString) return [];
-    return especialidadString.split(',').filter(e => e.trim() !== '');
+    // 'mixto' es un valor legacy que significa "sirve para todos los niveles";
+    // al editar se muestra como los 4 niveles marcados.
+    if (especialidadString.trim().toLowerCase() === 'mixto') {
+      return [...especialidadesDisponibles];
+    }
+    return especialidadString.split(',').map(e => e.trim()).filter(e => e !== '');
   };
 
   const formatEspecialidades = (especialidadesArray) => {
@@ -125,7 +130,7 @@ const CaballosAdmin = () => {
       propietario_id: "",
       disponibilidad: "disponible",
       estatus: "publico",
-      especialidad: "mixto",
+      especialidad: [],
       descripcion: ""
     });
   };
@@ -134,7 +139,8 @@ const CaballosAdmin = () => {
     setEditingHorse({
       ...caballo,
       propietario_id: caballo.propietario_id || "",
-      especialidad: parseEspecialidades(caballo.especialidad)
+      especialidad: parseEspecialidades(caballo.especialidad),
+      descripcion: caballo.descripcion ?? ""
     });
     setEditHorseModalOpen(true);
   };
@@ -163,7 +169,7 @@ const CaballosAdmin = () => {
         disponibilidad: editingHorse.disponibilidad,
         estatus: editingHorse.estatus,
         especialidad: editingHorse.especialidad, // Enviar como array
-        descripcion: editingHorse.descripcion.trim()
+        descripcion: (editingHorse.descripcion ?? '').trim()
       };
 
       const response = await fetch(`https://elrefugiocountryclub.com/api/api/caballos/${editingHorse.id}`, {
@@ -243,7 +249,7 @@ const CaballosAdmin = () => {
         disponibilidad: newHorse.disponibilidad,
         estatus: newHorse.estatus,
         especialidad: newHorse.especialidad, // Enviar como array
-        descripcion: newHorse.descripcion.trim()
+        descripcion: (newHorse.descripcion ?? '').trim()
       };
 
       console.log('🐎 Enviando datos del caballo:', horseData);
@@ -499,10 +505,10 @@ const CaballosAdmin = () => {
               <select className={`controls-filter-select ${especialidadFilter ? "filter-active" : ""}`} value={especialidadFilter} onChange={(e) => { setEspecialidadFilter(e.target.value); setCurrentPage(1); }}>
                 <option value="">Todas</option>
                 <option value="iniciacion">Iniciacion</option>
-                <option value="ponyclub">Ponyclub</option>
                 <option value="paseo">Paseo</option>
                 <option value="intermedio">Intermedio</option>
                 <option value="avanzado">Avanzado</option>
+                <option value="salto">Salto</option>
               </select>
             </div>
           </div>

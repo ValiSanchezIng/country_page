@@ -11,7 +11,7 @@ const mapNivelToEspecialidad = (nivel) => {
   if (n.includes('inici')) return 'iniciacion';
   if (n.includes('inter')) return 'intermedio';
   if (n.includes('paseo')) return 'paseo';
-  if (n.includes('avanz')) return 'salto';
+  if (n.includes('avanz') || n.includes('salto')) return 'avanzado';
   return null;
 };
 
@@ -134,10 +134,14 @@ router.get('/disponibles', async (req, res) => {
     }
 
     // Construir SQL parametrizado
-    // Nota: usamos LIKE por si especialidad tiene valores combinados (ej. 'mixto,iniciacion').
-    // Además tratamos 'mixto' como comodín: matchea cualquier nivel solicitado.
+    // Nota: usamos LIKE por si especialidad tiene valores combinados (ej. 'iniciacion,paseo').
+    // 'mixto' es comodín: matchea cualquier nivel solicitado.
+    // Para nivel avanzado aceptamos además los caballos marcados como 'salto' (disciplina equivalente).
+    const matchSalto = especialidad === 'avanzado';
     const whereEsp = especialidad
-      ? `AND (LOWER(c.especialidad) LIKE CONCAT('%', ?, '%') OR LOWER(c.especialidad) = 'mixto')`
+      ? (matchSalto
+          ? `AND (LOWER(c.especialidad) LIKE CONCAT('%', ?, '%') OR LOWER(c.especialidad) LIKE '%salto%' OR LOWER(c.especialidad) = 'mixto')`
+          : `AND (LOWER(c.especialidad) LIKE CONCAT('%', ?, '%') OR LOWER(c.especialidad) = 'mixto')`)
       : '';
 
     // Visibilidad de caballos según el cliente:
