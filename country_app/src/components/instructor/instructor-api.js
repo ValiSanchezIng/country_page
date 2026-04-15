@@ -341,9 +341,9 @@ export const invalidarCacheDisponibles = async (nivel, fecha, hora) => {
   });
 };
 
-export const obtenerCaballosDisponiblesParaHorario = async (nivelCliente, fecha, hora, claseActualId = null, tipoClase = null) => {
+export const obtenerCaballosDisponiblesParaHorario = async (nivelCliente, fecha, hora, claseActualId = null, tipoClase = null, clienteId = null) => {
   try {
-    const cacheKey = `${(nivelCliente || '').toLowerCase()}|${fecha || ''}|${hora || ''}|${tipoClase || ''}`; // incluir tipo de clase en la clave
+    const cacheKey = `${(nivelCliente || '').toLowerCase()}|${fecha || ''}|${hora || ''}|${tipoClase || ''}|${clienteId || ''}`; // incluir tipo de clase y cliente_id en la clave
     const cached = __cacheGet(cacheKey);
     if (cached) return cached;
     if (__dispPending.has(cacheKey)) return await __dispPending.get(cacheKey);
@@ -354,6 +354,7 @@ export const obtenerCaballosDisponiblesParaHorario = async (nivelCliente, fecha,
     if (fecha) url.searchParams.set('fecha', fecha);
     if (hora) url.searchParams.set('hora', hora);
     if (tipoClase) url.searchParams.set('tipo_clase', tipoClase);
+    if (clienteId) url.searchParams.set('cliente_id', clienteId);
 
     const promise = fetch(url.toString(), { method: 'GET' })
       .then(async (resp) => {

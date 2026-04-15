@@ -90,7 +90,7 @@ router.get('/', async (req, res) => {
 // /api/caballos/disponibles?nivel=Intermedio&fecha=YYYY-MM-DD&hora=HH:MM&exclude_reserva_id=123
 router.get('/disponibles', async (req, res) => {
   try {
-    const { nivel, fecha, hora, exclude_reserva_id, tipo_clase } = req.query;
+    const { nivel, fecha, hora, exclude_reserva_id, tipo_clase, cliente_id } = req.query;
     const ttlMs = 15 * 1000; // 15s (reducido para reflejar cambios de otros instructores más rápido)
 
     if (!fecha) {
@@ -104,8 +104,8 @@ router.get('/disponibles', async (req, res) => {
       ['salto', 'avanzado'].includes(tipo_clase.toLowerCase()) ? 3 : 0
     ) : 3; // Si no se especifica, usar el peor caso (3 horas)
 
-    // Clave de caché (incluir tipo_clase para diferenciar cooldowns)
-    const cacheKey = `disp:${(nivel||'').toLowerCase()}|${fecha}|${hora||''}|${tipo_clase||''}|${exclude_reserva_id||''}`;
+    // Clave de caché (incluir tipo_clase y cliente_id para diferenciar cooldowns y visibilidad de privados)
+    const cacheKey = `disp:${(nivel||'').toLowerCase()}|${fecha}|${hora||''}|${tipo_clase||''}|${exclude_reserva_id||''}|${cliente_id||''}`;
     const cached = getCache(cacheKey);
     if (cached) {
       return res.json(cached);
@@ -120,14 +120,24 @@ router.get('/disponibles', async (req, res) => {
     const especialidad = mapNivelToEspecialidad(nivel);
 
     // Construir SQL parametrizado
-    // Nota: usamos LIKE por si especialidad tiene valores combinados (ej. 'mixto,iniciacion')
-    const whereEsp = especialidad ? `AND LOWER(c.especialidad) LIKE CONCAT('%', ?, '%')` : '';
+    // Nota: usamos LIKE por si especialidad tiene valores combinados (ej. 'mixto,iniciacion').
+    // Además tratamos 'mixto' como comodín: matchea cualquier nivel solicitado.
+    const whereEsp = especialidad
+      ? `AND (LOWER(c.especialidad) LIKE CONCAT('%', ?, '%') OR LOWER(c.especialidad) = 'mixto')`
+      : '';
+
+    // Visibilidad de privados: un caballo con estatus='privado' solo debe aparecer si se
+    // indica cliente_id y coincide con su propietario. Sin cliente_id, se ocultan los privados.
+    const whereEstatus = cliente_id
+      ? `AND (c.estatus <> 'privado' OR c.propietario_id = ?)`
+      : `AND c.estatus <> 'privado'`;
 
     const sql = `
       SELECT c.id, c.nombre, c.especialidad
       FROM caballos c
       WHERE c.disponibilidad = 'disponible'
         ${whereEsp}
+        ${whereEstatus}
         AND NOT EXISTS (
           SELECT 1
           FROM caballos_descansos d
@@ -195,6 +205,7 @@ router.get('/disponibles', async (req, res) => {
 
     const params = [];
     if (especialidad) params.push(especialidad);
+    if (cliente_id) params.push(Number(cliente_id));
     // descansos
     params.push(fecha, fecha);
     // reservas del día (ocupación directa)

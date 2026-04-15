@@ -259,7 +259,7 @@ export default function InstructorDashboard() {
       // Si tenemos información de la clase con fecha y hora, usar filtrado por horario
       if (classItem && classItem.date && classItem.time) {
         console.log('🗓️ Aplicando filtrado por horario para:', classItem.date, classItem.time, 'Clase ID:', classItem.id, 'Tipo:', classItem.type);
-        const baseDisponibles = await obtenerCaballosDisponiblesParaHorario(nivelCliente, classItem.date, classItem.time, null, classItem.type);
+        const baseDisponibles = await obtenerCaballosDisponiblesParaHorario(nivelCliente, classItem.date, classItem.time, null, classItem.type, classItem.cliente_id || classItem.clienteId);
 
         // Excluir caballos ya asignados a otras clases en el mismo horario
         const ocupados = classes
