@@ -119,15 +119,15 @@ router.get('/disponibles', async (req, res) => {
 
     const especialidad = mapNivelToEspecialidad(nivel);
 
-    // Si el cliente es propietario y tiene al menos un caballo propio registrado,
-    // restringir el listado a SOLO sus caballos (no debe ver los del club).
+    // Si el cliente tiene al menos un caballo registrado a su nombre,
+    // restringir el listado a SOLO sus caballos (no debe ver los del club),
+    // independientemente de su tipo_cliente.
     let soloPropiosDeCliente = false;
     if (cliente_id) {
       const [[{ tieneCaballos } = { tieneCaballos: 0 }]] = await db.query(
         `SELECT COUNT(*) AS tieneCaballos
-         FROM caballos c
-         JOIN usuarios u ON u.id = c.propietario_id
-         WHERE c.propietario_id = ? AND u.tipo_cliente = 'propietario'`,
+         FROM caballos
+         WHERE propietario_id = ?`,
         [Number(cliente_id)]
       );
       soloPropiosDeCliente = Number(tieneCaballos) > 0;
