@@ -353,6 +353,8 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       });
 
       // Calcular reservas TOTALES ocupadas (solo 'pendiente' y 'confirmada') para el slot, ignorando las demás
+      // Para slots personalizados: cada cliente tiene su propio cupo (capacity=1) independiente;
+      // solo contar las reservas del propio usuario para no chocar con los personalizados de otros clientes.
       const totalBookingsForSlot = allWeekBookings.filter((b) => {
         if (b.fecha && b.hora_inicio && b.clase_nombre && slotDateStr) {
           const reservaDateStr = b.fecha.split('T')[0];
@@ -362,7 +364,11 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
             b.clase_nombre === className
           );
           const esEstatusValido = (b.estatus === 'pendiente' || b.estatus === 'confirmada');
-          
+
+          if (isPersonalized) {
+            return matchesSlot && esEstatusValido && b.cliente_id === userId;
+          }
+
           // Solo contar si el estatus es 'pendiente' o 'confirmada'
           return matchesSlot && esEstatusValido;
         }
