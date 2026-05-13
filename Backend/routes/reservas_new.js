@@ -863,16 +863,10 @@ router.get('/available-slots/:clienteId', async (req, res) => {
         continue; // Saltar este horario si no hay instructoras
       }
 
-      // Solo para iniciación: ajustar cupo según instructoras disponibles (considerando descansos)
-      // Para otras clases, el cupo se mantiene como está configurado
+      // El cupo se mantiene como está configurado (cupo_max). Para iniciacion/ponyclub
+      // ya se filtró arriba el caso de 0 instructoras; el conteo de instructoras no
+      // recorta el cupo máximo del slot.
       let cupoMaximoAjustado = infoClase.cupo_max;
-
-      if (['iniciacion', 'ponyclub'].includes(infoClase.nombre.toLowerCase())) {
-        // Para iniciación/ponyclub, el cupo es igual al número de instructoras disponibles
-        cupoMaximoAjustado = instructorasDisponibles;
-
-        // cupo ajustado si hay menos instructoras que cupo_max
-      }
 
       // Verificar cupo disponible
       const [reservasExistentes] = await db.query(`
@@ -973,17 +967,18 @@ router.post('/book', async (req, res) => {
     horaFinObj.setMinutes(horaFinObj.getMinutes() + infoClase.duracion_min);
     const hora_fin = horaFinObj.toTimeString().slice(0, 8);
 
-    // Para iniciación, ajustar cupo según instructoras disponibles (considerando descansos)
-    // Para otras clases, el cupo se mantiene como está configurado
+    // El cupo se mantiene como está configurado (cupo_max). El número de instructoras
+    // disponibles ya no recorta el cupo del slot — pero para iniciacion/ponyclub aún
+    // bloqueamos si NINGUNA instructora está disponible en ese horario.
     let cupoMaximoAjustado = infoClase.cupo_max;
-    
+
     if (['iniciacion', 'ponyclub'].includes(infoClase.nombre.toLowerCase())) {
-      // Calcular instructoras disponibles para este horario (considerando descansos)
       const instructorasDisponibles = await calcularInstructorasDisponibles(clase_id, fecha, hora_inicio);
-      
-      // Para iniciación/ponyclub, el cupo es igual al número de instructoras disponibles
-      cupoMaximoAjustado = instructorasDisponibles;
-      
+      if (instructorasDisponibles === 0) {
+        return res.status(400).json({
+          error: 'No hay instructoras disponibles para este horario'
+        });
+      }
     }
 
     // Verificar cupo disponible

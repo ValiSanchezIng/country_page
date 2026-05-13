@@ -304,13 +304,11 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         if (instructorasDisponibles <= 0) {
           blockedByInstructor = true;
           effectiveCapacity = 0;
+        } else if (isPersonalized) {
+          // Reservas personalizadas: el cupo sigue limitado por instructoras (slot 1:1).
+          effectiveCapacity = Math.min(capacity, instructorasDisponibles);
         } else {
-          // Para clases de iniciación o personalizados, el cupo real está limitado por el número de instructoras
-          if (isPersonalized || (className && className.toLowerCase().includes('iniciaci'))) {
-            effectiveCapacity = Math.min(capacity, instructorasDisponibles);
-          } else {
-            effectiveCapacity = capacity;
-          }
+          effectiveCapacity = capacity;
         }
       }
       

@@ -9,7 +9,7 @@ router.get('/clase/:nombreClase', async (req, res) => {
   try {
     // Obtener horarios agrupados por día de la semana
     const [rows] = await db.execute(
-      `SELECT 
+      `SELECT
         hc.id,
         hc.dia_semana,
         hc.hora_inicio,
@@ -17,7 +17,8 @@ router.get('/clase/:nombreClase', async (req, res) => {
         hc.capacidad,
         c.nombre as clase_nombre,
         c.id as clase_id,
-        c.duracion_min
+        c.duracion_min,
+        c.cupo_max
        FROM horarios_clase hc
        INNER JOIN clases c ON hc.clase_id = c.id
        WHERE c.nombre = ? AND hc.activo = 1
@@ -86,10 +87,12 @@ router.get('/clase/:nombreClase', async (req, res) => {
         acc[dia] = [];
       }
       
-      // Para iniciación/ponyclub, usar capacidad ajustada según instructoras disponibles
+      // Para iniciación/ponyclub: usar cupo_max de la clase (no recortar por # instructoras).
+      // Único guard: si ese día no queda NINGUNA instructora disponible, capacidad = 0.
       let capacidad = row.capacidad;
-      if (['iniciacion', 'ponyclub'].includes(nombreClase.toLowerCase()) && capacidadAjustadaPorDia[row.dia_semana] !== undefined) {
-        capacidad = capacidadAjustadaPorDia[row.dia_semana];
+      if (['iniciacion', 'ponyclub'].includes(nombreClase.toLowerCase())) {
+        const dispDia = capacidadAjustadaPorDia[row.dia_semana];
+        capacidad = (dispDia === 0) ? 0 : row.cupo_max;
       }
       
       acc[dia].push({
