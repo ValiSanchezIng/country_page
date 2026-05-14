@@ -326,9 +326,19 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       const hasPassed = slotEndTime < now;
       
       // ⏰ FILTRO 2: Calcular si está dentro de las próximas 2 horas o ya está en curso
-      const hoursUntilSlot = slotStartTime.diff(now, 'hours').hours;
-      // Bloquear si faltan menos de 2 horas O si la hora de inicio ya pasó (incluso si aún no termina)
-      const isWithin2Hours = hoursUntilSlot < 2;
+      // Plazo de reserva: mañana (< 12:00) cierra a las 9 PM del día anterior; tarde (≥ 12:00) cierra a la 1 PM del mismo día
+      const esMañana = hours < 12;
+      let isWithin2Hours;
+      if (esMañana) {
+        const limiteReserva = slotStartTime.minus({ days: 1 }).set({ hour: 21, minute: 0, second: 0, millisecond: 0 });
+        isWithin2Hours = now > limiteReserva;
+      } else {
+        const limiteReserva = slotStartTime.set({ hour: 13, minute: 0, second: 0, millisecond: 0 });
+        isWithin2Hours = now > limiteReserva;
+      }
+      const deadlineMessage = isWithin2Hours
+        ? (esMañana ? 'Cierre 9:00 PM día anterior' : 'Cierre 1:00 PM mismo día')
+        : null;
 
       // Filtrar reservas del usuario para este slot (ocupado si no está cancelada o cancelada por instructor)
       const slotBookings = userBookings.filter((b) => {
@@ -399,7 +409,8 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         bookings: slotBookings,
         totalBooked: totalBookingsForSlot,
         isBlocked: blockedByInstructor || isBlocked || isWithin2Hours || hasPassed, // Bloquear si: sin instructoras, iniciación tarde, <2h, ya pasó
-        isWithin2Hours, // Flag específico para mensaje "muy pronto"
+        isWithin2Hours, // Flag específico para mensaje de plazo
+        deadlineMessage, // Mensaje explicando qué plazo cerró
         hasPassed, // Flag específico para mensaje "clase finalizada"
         userStatus, // nuevo: estatus de la reserva del usuario (si existe)
         instructoraNombre,
@@ -481,7 +492,12 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         
         <div className="wc-legend-item">
           <div className="wc-legend-box wc-legend-box--full"></div>
-          <span className="wc-legend-text">Completo/Bloqueado</span>
+          <span className="wc-legend-text">Completo</span>
+        </div>
+
+        <div className="wc-legend-item">
+          <div className="wc-legend-box wc-legend-box--deadline"></div>
+          <span className="wc-legend-text">Plazo cerrado</span>
         </div>
 
         <div className="wc-legend-item">
@@ -523,7 +539,10 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
 
             {/* Grid de franjas para el día (2 columnas) */}
             <div className="wc-day-grid">
-              {slots.map((slot) => {
+              {(() => {
+                let morningHeaderInserted = false;
+                let afternoonHeaderInserted = false;
+                return slots.flatMap((slot) => {
                 // Determina si el slot ya está reservado por este usuario (solo confirmada/pendiente)
                 // Usar allWeekBookings en lugar de slot.bookings para tener acceso a cliente_id
                 // Usar función helper para evitar problemas de zona horaria
@@ -541,7 +560,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
                   return matchesSlot && b.cliente_id === userId && (b.estatus === 'confirmada' || b.estatus === 'pendiente');
                 });
                 
-                return (
+                const card = (
                   <TimeSlotCard
                     key={slot.id}
                     time={slot.time}
@@ -550,6 +569,7 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
                     isBookedByUser={isBookedByUser}
                     isBlocked={slot.isBlocked || false}
                     isWithin2Hours={slot.isWithin2Hours || false}
+                    deadlineMessage={slot.deadlineMessage || null}
                     hasPassed={slot.hasPassed || false}
                     userStatus={slot.userStatus}
                     instructoraNombre={slot.instructoraNombre}
@@ -559,7 +579,18 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
                     onClick={() => onSlotClick(slot)}
                   />
                 );
-              })}
+                const items = [];
+                const slotHour = parseInt(slot.time);
+                if (slotHour < 12 && !morningHeaderInserted) {
+                  morningHeaderInserted = true;
+                  items.push(<div key="wc-morning-header" className="wc-group-header">Clases de mañana · reservas hasta las 9:00 PM del día anterior</div>);
+                } else if (slotHour >= 12 && !afternoonHeaderInserted) {
+                  afternoonHeaderInserted = true;
+                  items.push(<div key="wc-afternoon-header" className="wc-group-header">Clases de tarde · reservas hasta la 1:00 PM del mismo día</div>);
+                }
+                items.push(card);
+                return items;
+              }); })()}
             </div>
           </div>
         ))}

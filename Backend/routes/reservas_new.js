@@ -923,12 +923,26 @@ router.post('/book', async (req, res) => {
       minute: Number(minuto),
       second: Number(segundo)
     }, { zone: 'America/Cancun' });
-    const diferenciaHoras = fechaHoraReserva.diff(ahora, 'hours').hours;
+    const horaClase = Number(hora);
+    const esMañana = horaClase < 12;
 
-    if (diferenciaHoras < 2) {
-      return res.status(400).json({ 
-        error: 'Las reservas deben hacerse al menos 2 horas antes (horario Cancún)' 
-      });
+    if (esMañana) {
+      const limiteReserva = fechaHoraReserva
+        .minus({ days: 1 })
+        .set({ hour: 21, minute: 0, second: 0, millisecond: 0 });
+      if (ahora > limiteReserva) {
+        return res.status(400).json({
+          error: 'Las reservas para clases de la mañana deben hacerse antes de las 9:00 PM del día anterior.'
+        });
+      }
+    } else {
+      const limiteReserva = fechaHoraReserva
+        .set({ hour: 13, minute: 0, second: 0, millisecond: 0 });
+      if (ahora > limiteReserva) {
+        return res.status(400).json({
+          error: 'Las reservas para clases de la tarde deben hacerse antes de la 1:00 PM del mismo día.'
+        });
+      }
     }
 
     // Obtener información del cliente

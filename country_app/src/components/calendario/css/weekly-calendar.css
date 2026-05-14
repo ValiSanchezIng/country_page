@@ -37,6 +37,7 @@
 .wc-legend-box--full { background-color: #a07560; border-radius: 4px; }
 .wc-legend-box--partial { background-color: #fff7ee; border: 2px solid #e8b87a; }
 .wc-legend-box--blocked { background-color: #5a5a5a; border-radius: 4px; }
+.wc-legend-box--deadline { background-color: #f0ebe4; border: 1.5px solid #d5c5b5; border-radius: 4px; }
 
 .wc-legend-text {
     color: #6B4423;
@@ -236,7 +237,8 @@
 /* Tablets grandes (769px - 1024px) */
 @media (min-width: 769px) and (max-width: 1024px) {
     .wc-day-grid {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(150px, 200px));
+        justify-content: center;
         gap: 12px;
     }
 }
@@ -252,7 +254,8 @@
     }
 
     .wc-day-grid {
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(160px, 220px));
+        justify-content: center;
         gap: 12px;
     }
 
@@ -264,6 +267,18 @@
         min-width: 40px;
         height: 40px;
     }
+}
+
+/* Header de grupo mañana / tarde */
+.wc-group-header {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4px 0;
+    color: #a08b74;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
 }
 
 /* Scrollbar */

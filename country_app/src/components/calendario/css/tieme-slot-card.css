@@ -40,6 +40,23 @@
   opacity: 0.7;
 }
 
+/* Plazo de reserva cerrado: estilo suave, diferenciado de "clase finalizada" */
+.tsc-card.tsc--deadline {
+  background-color: #f0ebe4 !important;
+  border-color: #d5c5b5 !important;
+  color: #8a6a50 !important;
+  cursor: not-allowed;
+  box-shadow: none;
+  opacity: 0.85;
+}
+
+.tsc-card.tsc--deadline .tsc-inner,
+.tsc-card.tsc--deadline .tsc-time,
+.tsc-card.tsc--deadline .tsc-horse,
+.tsc-card.tsc--deadline .tsc-meta {
+  color: #8a6a50 !important;
+}
+
 /* Cancelada por instructor */
 .tsc-card.tsc--cancelled-instructor {
   background-color: #d9534f !important;
@@ -111,7 +128,7 @@
 }
 
 /* Hover */
-.tsc-card:not(.tsc--blocked):not(.tsc--full):hover {
+.tsc-card:not(.tsc--blocked):not(.tsc--full):not(.tsc--deadline):hover {
   box-shadow: 0 4px 16px rgba(107, 68, 35, 0.14);
   transform: translateY(-2px);
 }
@@ -211,7 +228,7 @@
     font-size: 8px;
   }
 
-  .tsc-card:not(.tsc--blocked):not(.tsc--full):hover {
+  .tsc-card:not(.tsc--blocked):not(.tsc--full):not(.tsc--deadline):hover {
     transform: translateY(-1px);
   }
 }
