@@ -9,6 +9,7 @@ import CaballosAdmin from "./CaballosAdmin";
 import InstructorasAdmin from "./InstructorasAdmin";
 import ReservasAdmin from "./ReservasAdmin";
 import HorariosPersonalizadosAdmin from "./administrador/HorariosPersonalizadosAdmin";
+import BloqueosAdmin from "./administrador/BloqueosAdmin";
 import MetricasResumen from "./administrador/MetricasResumen";
 
 const MembershipAdminDashboard = () => {
@@ -1102,6 +1103,7 @@ const MembershipAdminDashboard = () => {
               { key: 'instructoras', label: 'Instructoras' },
               { key: 'reservas', label: 'Reservas' },
               { key: 'horariosPersonalizados', label: 'Horarios Extras' },
+              { key: 'bloqueos', label: 'Bloqueos' },
               { key: 'metricas', label: 'Métricas' },
             ].map(tab => (
               <button
@@ -1424,6 +1426,12 @@ const MembershipAdminDashboard = () => {
       {activeTab === "horariosPersonalizados" && (
         <div className="tab-content">
           <HorariosPersonalizadosAdmin />
+        </div>
+      )}
+
+      {activeTab === "bloqueos" && (
+        <div className="tab-content">
+          <BloqueosAdmin />
         </div>
       )}
 

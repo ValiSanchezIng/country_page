@@ -4,7 +4,8 @@ import axios from 'axios';
 import LogoutButton from './LogoutBoton';
 import ReservasAdmin from './administrador/ReservasAdmin';
 import HorariosPersonalizadosAdmin from './administrador/HorariosPersonalizadosAdmin';
-import { Search, Calendar, Clock, User, Loader, DollarSign, TrendingUp, TrendingDown, Download, Filter, CalendarCheck, FileText, UserPlus } from 'lucide-react';
+import BloqueosAdmin from './administrador/BloqueosAdmin';
+import { Search, Calendar, Clock, User, Loader, DollarSign, TrendingUp, TrendingDown, Download, Filter, CalendarCheck, FileText, UserPlus, Ban } from 'lucide-react';
 import '../CSS/AdminPanel.css';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 const AdminPanel = () => {
@@ -141,12 +142,19 @@ const AdminPanel = () => {
           <FileText size={20} />
           Contabilidad
         </button>
-        <button 
+        <button
           className={`tab-button ${activeTab === 'horarios' ? 'active' : ''}`}
           onClick={() => setActiveTab('horarios')}
         >
           <Clock size={20} />
           Horarios Extras
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'bloqueos' ? 'active' : ''}`}
+          onClick={() => setActiveTab('bloqueos')}
+        >
+          <Ban size={20} />
+          Bloqueos
         </button>
       </div>
 
@@ -159,6 +167,10 @@ const AdminPanel = () => {
 
       {activeTab === 'horarios' && (
         <HorariosPersonalizadosAdmin />
+      )}
+
+      {activeTab === 'bloqueos' && (
+        <BloqueosAdmin />
       )}
 
       {activeTab === 'contabilidad' && (

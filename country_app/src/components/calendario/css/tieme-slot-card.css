@@ -15,7 +15,8 @@
 }
 
 .tsc-card.tsc--blocked,
-.tsc-card.tsc--full {
+.tsc-card.tsc--full,
+.tsc-card.tsc--admin-blocked {
   cursor: not-allowed;
 }
 
@@ -127,8 +128,28 @@
   color: white;
 }
 
+/* Bloqueo administrativo (admin cerró el turno: clima, evento del club, etc.) */
+.tsc-card.tsc--admin-blocked {
+  background-color: #b54343 !important;
+  border-color: #9c2c2c !important;
+  color: white !important;
+  box-shadow: none;
+  opacity: 0.9;
+}
+
+.tsc-card.tsc--admin-blocked .tsc-inner,
+.tsc-card.tsc--admin-blocked .tsc-time,
+.tsc-card.tsc--admin-blocked .tsc-horse,
+.tsc-card.tsc--admin-blocked .tsc-meta {
+  color: white !important;
+}
+
+.tsc-blocked-text {
+  font-weight: 700;
+}
+
 /* Hover */
-.tsc-card:not(.tsc--blocked):not(.tsc--full):not(.tsc--deadline):hover {
+.tsc-card:not(.tsc--blocked):not(.tsc--full):not(.tsc--deadline):not(.tsc--admin-blocked):hover {
   box-shadow: 0 4px 16px rgba(107, 68, 35, 0.14);
   transform: translateY(-2px);
 }
@@ -228,7 +249,7 @@
     font-size: 8px;
   }
 
-  .tsc-card:not(.tsc--blocked):not(.tsc--full):not(.tsc--deadline):hover {
+  .tsc-card:not(.tsc--blocked):not(.tsc--full):not(.tsc--deadline):not(.tsc--admin-blocked):hover {
     transform: translateY(-1px);
   }
 }

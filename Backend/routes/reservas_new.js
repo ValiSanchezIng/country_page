@@ -945,6 +945,27 @@ router.post('/book', async (req, res) => {
       }
     }
 
+    // ===================== CHEQUEO DE BLOQUEO ADMINISTRATIVO =====================
+    // Si el admin bloqueó (fecha + turno) — para esta clase o para "Todas" — rechazar.
+    // No afecta a reservas ya existentes, solo impide reservas NUEVAS.
+    const turnoReserva = esMañana ? 'mañana' : 'tarde';
+    const [bloqueos] = await db.query(`
+      SELECT id, motivo FROM bloqueos_clase
+      WHERE activo = 1
+        AND fecha = ?
+        AND turno = ?
+        AND (clase_id IS NULL OR clase_id = ?)
+      LIMIT 1
+    `, [formatDateForMySQL(fecha), turnoReserva, clase_id]);
+
+    if (bloqueos.length > 0) {
+      return res.status(400).json({
+        error: bloqueos[0].motivo
+          ? `Las clases de la ${turnoReserva} de este día no están disponibles: ${bloqueos[0].motivo}`
+          : `Las clases de la ${turnoReserva} de este día no están disponibles.`
+      });
+    }
+
     // Obtener información del cliente
     const [cliente] = await db.query(`
       SELECT tipo_cliente FROM usuarios WHERE id = ?

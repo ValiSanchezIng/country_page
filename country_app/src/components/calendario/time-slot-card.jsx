@@ -4,7 +4,7 @@ import './css/tieme-slot-card.css'
 // Tarjeta de franja horaria: muestra hora, plazas y estado (disponible/reservada/bloqueada).
 // Usa clases CSS prefijadas `tsc-` y responde a click/Enter/Space para seleccionar la franja.
 
-export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBlocked, isWithin2Hours, hasPassed, deadlineMessage, userStatus, instructoraNombre, motivoCancelacion, isPersonalized, personalizedInstructorUnavailable, onClick }) {
+export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBlocked, isWithin2Hours, hasPassed, deadlineMessage, isAdminBlocked, blockMessage, userStatus, instructoraNombre, motivoCancelacion, isPersonalized, personalizedInstructorUnavailable, onClick }) {
   const isFull = bookedCount >= capacity;
   const availableSpots = capacity - bookedCount;
   const hasSomeBookings = bookedCount > 0 && bookedCount < capacity;
@@ -14,8 +14,11 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
   const userHasBooking = userStatus === 'confirmada' || userStatus === 'pendiente';
 
   // Estado visual según el estatus de la reserva del usuario
-  // PRIORIDAD: Si userStatus indica que el usuario tiene reserva, mostrar como 'booked' independientemente de isBookedByUser
-  let stateClass = isBlocked && isWithin2Hours && !hasPassed
+  // PRIORIDAD MÁXIMA: bloqueo administrativo (admin cerró el turno). Solo si el usuario
+  // no tiene ya una reserva ahí — su reserva existente sigue mostrándose normal.
+  let stateClass = isAdminBlocked && !userHasBooking
+    ? 'tsc--admin-blocked'
+    : isBlocked && isWithin2Hours && !hasPassed
     ? 'tsc--deadline'
     : isBlocked
     ? 'tsc--blocked'
@@ -33,16 +36,18 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
     stateClass = 'tsc--attended';
   }
 
-  // Clase adicional para horarios personalizados
+  // Clase adicional para horarios personalizados — el bloqueo admin tiene prioridad sobre estos
   const isUnavailablePersonalized = personalizedInstructorUnavailable && !userHasBooking;
 
-  if (isUnavailablePersonalized) {
-    stateClass = 'tsc--personalized-unavailable';
-  } else if (isPersonalized && !userHasBooking && !isBlocked && !isFull) {
-    stateClass += ' tsc--personalized';
+  if (!isAdminBlocked || userHasBooking) {
+    if (isUnavailablePersonalized) {
+      stateClass = 'tsc--personalized-unavailable';
+    } else if (isPersonalized && !userHasBooking && !isBlocked && !isFull) {
+      stateClass += ' tsc--personalized';
+    }
   }
 
-  const isClickable = !isBlocked && !isFull && !isUnavailablePersonalized;
+  const isClickable = !isBlocked && !isFull && !isUnavailablePersonalized && !(isAdminBlocked && !userHasBooking);
 
   const handleKeyDown = (e) => {
     if ((e.key === 'Enter' || e.key === ' ') && isClickable) {
@@ -52,7 +57,9 @@ export function TimeSlotCard({ time, capacity, bookedCount, isBookedByUser, isBl
   };
 
   let metaText = null;
-  if (isUnavailablePersonalized) {
+  if (isAdminBlocked && !userHasBooking) {
+    metaText = <span className="tsc-blocked-text">{blockMessage || 'Clases canceladas'}</span>;
+  } else if (isUnavailablePersonalized) {
     metaText = <span className="tsc-personalized-text">Instructor asignado no disponible</span>;
   } else if (isBlocked) {
     // Mensaje específico según el tipo de bloqueo

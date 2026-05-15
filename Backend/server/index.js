@@ -14,6 +14,7 @@ import caballosRoutes from "../routes/caballos.js";
 import instructorasRoutes from "../routes/instructoras.js";
 import reservasAdminRoutes from "../routes/reservas_admin.js";
 import descansosRoutes from "../routes/descansos.js";
+import bloqueosRoutes from "../routes/bloqueos.js";
 
 console.log("✅ Rutas importadas correctamente");
 
@@ -142,6 +143,7 @@ app.use("/api/instructoras", instructorasRoutes);
 app.use("/api/reservas-admin", reservasAdminRoutes);
 app.use("/api/reservas", reservasRoutes);
 app.use("/api/descansos", descansosRoutes);
+app.use("/api/bloqueos", bloqueosRoutes);
 
 // ========================
 // Manejo de errores

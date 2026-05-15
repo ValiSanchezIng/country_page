@@ -157,6 +157,30 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
     fetchInstructorAvailability();
   }, [dynamicSchedule, currentDate, claseId]);
 
+  // Cargar bloqueos administrativos vigentes para la semana visible
+  // (NO depende de claseId — los bloqueos "Todas las clases" deben aplicar también)
+  const [bloqueos, setBloqueos] = useState([]);
+  useEffect(() => {
+    const fetchBloqueos = async () => {
+      const weekDates = getCurrentWeek(currentDate, 1);
+      if (!weekDates || weekDates.length === 0) return;
+      const fechaInicio = getDateString(weekDates[0]);
+      const fechaFin = getDateString(weekDates[weekDates.length - 1]);
+      try {
+        const res = await fetch(
+          `https://elrefugiocountryclub.com/api/api/bloqueos?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}&solo_activos=1`
+        );
+        if (!res.ok) throw new Error('Error al cargar bloqueos');
+        const data = await res.json();
+        setBloqueos(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Error cargando bloqueos:', err);
+        setBloqueos([]);
+      }
+    };
+    fetchBloqueos();
+  }, [currentDate]);
+
   // Ya no necesitamos cargar capacidades ajustadas por fecha
   // El endpoint /api/horarios/clase ya devuelve la capacidad ajustada según descansos fijos
   
@@ -397,6 +421,20 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
 
       const hour = parseInt(time.split(":")[0], 10);
       const isBlocked = userLevel === "Iniciación" && hour >= 17;
+
+      // Bloqueo administrativo: ¿hay un bloqueo activo para esta fecha + turno + (clase o todas)?
+      const turnoSlot = hours < 12 ? 'mañana' : 'tarde';
+      const matchingBloqueo = bloqueos.find(b => {
+        const bFecha = String(b.fecha || '').split('T')[0];
+        if (bFecha !== slotDateStr) return false;
+        if (b.turno !== turnoSlot) return false;
+        return b.clase_id == null || b.clase_id === claseId;
+      });
+      const isAdminBlocked = !!matchingBloqueo;
+      const blockMessage = isAdminBlocked
+        ? (matchingBloqueo.motivo ? `Clases canceladas: ${matchingBloqueo.motivo}` : 'Clases canceladas')
+        : null;
+
       // NO bloquear si está cancelada por instructor - la reserva se elimina y el slot queda disponible
       slots.push({
         id: slotId,
@@ -408,10 +446,12 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
         blockedByInstructor,
         bookings: slotBookings,
         totalBooked: totalBookingsForSlot,
-        isBlocked: blockedByInstructor || isBlocked || isWithin2Hours || hasPassed, // Bloquear si: sin instructoras, iniciación tarde, <2h, ya pasó
+        isBlocked: blockedByInstructor || isBlocked || isWithin2Hours || hasPassed || isAdminBlocked, // Bloquear si: sin instructoras, iniciación tarde, <2h, ya pasó, bloqueo admin
         isWithin2Hours, // Flag específico para mensaje de plazo
         deadlineMessage, // Mensaje explicando qué plazo cerró
         hasPassed, // Flag específico para mensaje "clase finalizada"
+        isAdminBlocked, // Flag: bloqueo administrativo (admin cerró este turno)
+        blockMessage, // Mensaje del bloqueo admin (con motivo si lo tiene)
         userStatus, // nuevo: estatus de la reserva del usuario (si existe)
         instructoraNombre,
         motivoCancelacion, // motivo de cancelación si existe
@@ -571,6 +611,8 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
                     isWithin2Hours={slot.isWithin2Hours || false}
                     deadlineMessage={slot.deadlineMessage || null}
                     hasPassed={slot.hasPassed || false}
+                    isAdminBlocked={slot.isAdminBlocked || false}
+                    blockMessage={slot.blockMessage || null}
                     userStatus={slot.userStatus}
                     instructoraNombre={slot.instructoraNombre}
                     motivoCancelacion={slot.motivoCancelacion}
