@@ -37,6 +37,8 @@ erDiagram
     clases ||--o{ instructora_clase : "clase_id"
     clases ||--o{ caballo_clase : "clase_id"
     clases ||--o{ horarios_personalizados : "clase_id"
+    clases ||--o{ bloqueos_clase : "clase_id (nullable)"
+    usuarios ||--o{ bloqueos_clase : "creado_por"
 
     caballos ||--o{ reservas : "caballo_id"
     caballos ||--o{ caballo_clase : "caballo_id"
@@ -246,6 +248,28 @@ Días de descanso o ausencia de instructoras. Pueden ser específicos (rango de 
 | `reservas_realizadas` | INT | NO | `0` | Contador de reservas hechas durante este descanso |
 
 > Cuando `reservas_realizadas >= limite_reservas`, el descanso se ignora en la lógica de disponibilidad.
+
+---
+
+### `bloqueos_clase`
+Bloqueos administrativos de slots por **fecha + turno + clases**. Creada en `migrations/014_bloqueos_clase.sql`. El admin la gestiona desde Contabilidad → Bloqueos para cerrar horarios puntuales (clima, eventos del club, etc.). **Solo impide reservas nuevas**; las reservas ya existentes en ese slot no se tocan.
+
+| Columna | Tipo | Nullable | Default | Notas |
+|---------|------|----------|---------|-------|
+| `id` | INT AUTO_INCREMENT | NO | — | PK |
+| `clase_id` | INT | SÍ | NULL | FK → `clases.id` ON DELETE CASCADE. `NULL` = aplica a **TODAS** las clases de esa fecha+turno |
+| `fecha` | DATE | NO | — | Día bloqueado |
+| `turno` | ENUM | NO | — | `mañana` (hora_inicio < 12:00) o `tarde` (≥ 12:00) |
+| `motivo` | VARCHAR(255) | SÍ | NULL | Texto libre — clima, evento, etc. |
+| `creado_por` | INT | SÍ | NULL | FK → `usuarios.id` ON DELETE SET NULL |
+| `creado_en` | DATETIME | NO | `CURRENT_TIMESTAMP` | |
+| `activo` | TINYINT(1) | NO | `1` | `0` = anulado (soft-delete, reservado para uso futuro) |
+
+**Índices:** `idx_bloqueos_fecha_turno (fecha, turno, activo)`, `idx_bloqueos_clase (clase_id, activo)`.
+
+**Modelado de "multi-clase":** un bloqueo que aplica a varias clases se guarda como **una fila por clase**. "Todas las clases" = una sola fila con `clase_id = NULL`. No hay UNIQUE — la ruta `POST /api/bloqueos` hace el chequeo de conflicto a mano (igual que `descansos`).
+
+**Enforcement:** consultado por `POST /api/reservas/book` (rechaza 400 con motivo) y por `weekly-calendar.jsx` (renderiza los slots como `tsc--admin-blocked`).
 
 ---
 

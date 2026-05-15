@@ -15,6 +15,7 @@ Base URL local: `http://localhost:5000/api`
 - [Horarios](#horarios--apihorarios)
 - [Instructoras](#instructoras--apiinstructoras)
 - [Descansos](#descansos--apidescansos)
+- [Bloqueos](#bloqueos--apibloqueos)
 - [Email](#email--apiemail)
 - [Instructor (legacy)](#instructor-legacy--apiinstructor)
 - [Reservas Admin (legacy)](#reservas-admin-legacy--apireservas-admin)
@@ -204,6 +205,29 @@ Archivo: `Backend/routes/descansos.js`
 | `POST` | `/` | Crear descanso |
 | `PUT` | `/:id` | Editar descanso |
 | `DELETE` | `/:id` | Eliminar descanso |
+
+---
+
+## Bloqueos — `/api/bloqueos`
+
+Archivo: `Backend/routes/bloqueos.js`
+
+Bloqueos administrativos de slots por **fecha + turno (mañana/tarde) + clases**. Cuando un admin crea un bloqueo, los clientes no pueden hacer NUEVAS reservas en ese horario. Las reservas ya existentes **no** se cancelan automáticamente (el admin las gestiona desde Reservas si quiere).
+
+Reglas:
+- `clase_id NULL` → el bloqueo aplica a **todas** las clases de esa fecha + turno.
+- `turno = 'mañana'` → afecta slots con `hora_inicio < 12:00`.
+- `turno = 'tarde'` → afecta slots con `hora_inicio >= 12:00`.
+- Un bloqueo "Todas" en fecha+turno hace conflicto con cualquier otro de ese mismo fecha+turno.
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `GET` | `/` | Listar bloqueos (filtros: `?fecha_inicio=`, `?fecha_fin=`, `?clase_id=`, `?solo_activos=1`) |
+| `GET` | `/check` | Verificar si un slot está bloqueado (`?fecha=&turno=&clase_id=`) |
+| `POST` | `/` | Crear uno o varios bloqueos. Body: `{ clase_ids: number[], fecha, turno, motivo?, creado_por? }` — `clase_ids: []` = "Todas" (inserta 1 fila con `clase_id = NULL`); con ids inserta 1 fila por cada id. |
+| `DELETE` | `/:id` | Eliminar (hard-delete) un bloqueo |
+
+**Enforcement:** `POST /api/reservas/book` consulta `bloqueos_clase` después del check de plazo de reserva. Si hay un bloqueo activo que cubra esa `fecha + turno + (clase_id o NULL)`, responde **400** con `{ error: 'Las clases de la <turno> de este día no están disponibles[: motivo]' }`.
 
 ---
 

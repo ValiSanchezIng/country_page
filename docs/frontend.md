@@ -174,8 +174,13 @@ Usados dentro de `/contabilidad` y `/admin`:
 | `InstructorasAdmin.jsx` | CRUD de instructoras y horarios |
 | `ReservasAdmin.jsx` | Vista y gestión admin de reservas |
 | `HorariosPersonalizadosAdmin.jsx` | Horarios personalizados por cliente |
+| `BloqueosAdmin.jsx` | Bloqueos administrativos de slots (fecha + turno + clases). CRUD sobre `/api/bloqueos`. Pestaña dentro de Contabilidad. |
 | `MetricasResumen.jsx` | Dashboard de métricas |
 | `ContabilidadLocal.jsx` | Vista de contabilidad local |
+
+**Integración del bloqueo en el calendario del cliente:**
+- `calendario/weekly-calendar.jsx` fetcha `GET /api/bloqueos?fecha_inicio=&fecha_fin=&solo_activos=1` para la semana visible (depende solo de `currentDate`, no de `claseId`, para incluir los bloqueos de "Todas las clases"). Dentro de `generateTimeSlots` calcula `isAdminBlocked` + `blockMessage` por slot y los fusiona en `slot.isBlocked`.
+- `calendario/time-slot-card.jsx` recibe `isAdminBlocked` y `blockMessage` y renderiza el estado `tsc--admin-blocked` (rojo, "Clases canceladas[: motivo]") con prioridad máxima — **salvo** si el cliente ya tiene una reserva en ese slot, en cuyo caso su reserva se sigue mostrando normal.
 
 ---
 

@@ -15,8 +15,9 @@
 4. Instructoras
 5. Reservas
 6. Horarios Extra
-7. Métricas
-8. Preguntas Frecuentes
+7. Bloqueos
+8. Métricas
+9. Preguntas Frecuentes
 
 ---
 
@@ -25,7 +26,7 @@
 Para acceder al panel de administración, inicia sesión con tu cuenta de administrador. Una vez dentro, verás la barra de navegación superior con las secciones principales:
 
 - **Reservas**
-- **Contabilidad** — incluye Clientes, Caballos, Instructoras, Horarios Extra y Métricas
+- **Contabilidad** — incluye Clientes, Caballos, Instructoras, Horarios Extra, **Bloqueos** y Métricas
 - **Horarios Extra**
 
 > **Nota sobre actualización automática:** El sistema se actualiza automáticamente cada 30 segundos. Si otro administrador realiza un cambio (por ejemplo, da de alta un cliente o registra un pago), los datos en tu pantalla se refrescarán solos. También puedes cambiar de pestaña en el navegador y volver: los datos se sincronizarán de inmediato al regresar.
@@ -405,7 +406,76 @@ Ideal para: alumnos con clases regulares en dias y horarios fijos distintos al e
 
 ---
 
-## 7. Metricas
+## 7. Bloqueos
+
+La seccion de **Bloqueos** permite cerrar horarios puntuales para que los clientes no puedan reservar — util cuando hay mal clima, un evento del club, o cualquier motivo que obligue a suspender clases en un dia y turno especifico.
+
+> **Importante:** Un bloqueo solo **impide nuevas reservas**. Las reservas que los clientes ya hicieron en ese horario **no se cancelan automaticamente**. Si necesitas cancelarlas, hazlo manualmente desde la pestaña **Reservas** una por una.
+
+### 7.1 Como acceder
+
+Desde el menu principal, haz clic en **Contabilidad** y luego en la pestaña **Bloqueos** (entre "Horarios Extras" y "Metricas").
+
+### 7.2 Vista general
+
+Al ingresar veras la lista de bloqueos registrados, con tres filtros arriba:
+
+- **Vigentes** — bloqueos de hoy en adelante (los que estan activos o aplicaran proximamente). Es la vista por defecto.
+- **Pasados** — bloqueos cuya fecha ya paso (historico).
+- **Todos** — muestra ambos.
+
+Cada fila de la tabla muestra:
+
+| Columna | Descripcion |
+|---|---|
+| **Fecha** | Dia bloqueado (ej.: lun. 15 may. 2026) |
+| **Turno** | `mañana` (slots antes de las 12:00) o `tarde` (slots desde las 12:00) |
+| **Clase** | Nombre de la clase bloqueada, o **"Todas las clases"** si aplica a todas |
+| **Motivo** | Texto libre que explica el bloqueo (clima, evento, etc.). Puede estar vacio. |
+| **Acciones** | Boton de eliminar |
+
+### 7.3 Crear un bloqueo
+
+1. Haz clic en el boton **"Nuevo Bloqueo"** arriba a la derecha.
+2. Completa el formulario:
+
+**Fecha:** dia que quieres cerrar. Solo se permiten fechas de hoy en adelante.
+
+**Turno:** elige uno de los dos:
+- **Mañana** — afecta todos los slots con hora_inicio antes de las 12:00.
+- **Tarde** — afecta todos los slots con hora_inicio desde las 12:00.
+
+**Clases a bloquear:**
+- Por defecto esta marcada la casilla **"Todas las clases"** — bloquea todos los tipos (Iniciación, Intermedio, Avanzado, Paseo, Pony Club…) para esa fecha + turno.
+- Si quieres bloquear solo algunos tipos, **desmarca** "Todas las clases" y marca las casillas individuales de las clases que quieres cerrar (puedes elegir varias a la vez).
+
+**Motivo (opcional):** texto corto que se mostrara a los clientes en las tarjetas bloqueadas (ej.: "clima", "evento del club"). Si lo dejas vacio, los clientes solo veran "Clases canceladas".
+
+3. Haz clic en **Crear Bloqueo**.
+
+> **Nota:** Si seleccionaste varias clases, el sistema crea **un bloqueo por cada clase** (los veras como filas separadas en la tabla). Si elegiste "Todas las clases", se crea **una sola fila** con clase = "Todas las clases".
+
+### 7.4 Que ven los clientes
+
+En el calendario semanal del cliente, los slots bloqueados aparecen en **rojo** con la etiqueta:
+- **"Clases canceladas: <motivo>"** si pusiste motivo.
+- **"Clases canceladas"** si no pusiste motivo.
+
+El cliente no puede hacer clic sobre esos slots para reservar. Si intenta reservar via API directa, el backend tambien lo rechaza con el mismo mensaje.
+
+### 7.5 Eliminar un bloqueo
+
+Haz clic en el icono de basura de la fila. El sistema pedira confirmacion. Al eliminar el bloqueo, las clases vuelven a estar disponibles inmediatamente para que los clientes reserven.
+
+### 7.6 Ejemplos comunes
+
+- **"Bloquear las clases de la tarde de mañana"**: Fecha = mañana, Turno = `tarde`, Clases = "Todas las clases".
+- **"Cerrar el dia entero el viernes"**: crea **dos** bloqueos para esa fecha — uno con turno `mañana` y otro con turno `tarde`.
+- **"Solo cancelar iniciación y avanzado de la tarde del sabado"**: Fecha = sabado, Turno = `tarde`, desmarca "Todas las clases" y marca solo Iniciación y Avanzado.
+
+---
+
+## 8. Metricas
 
 La seccion de **Metricas** proporciona un resumen analitico del rendimiento del club, disenado para apoyar la toma de decisiones operativas y academicas.
 
@@ -488,7 +558,7 @@ La franja horaria con mas reservas en el periodo. Util para asignar instructoras
 
 ---
 
-## 8. Preguntas Frecuentes
+## 9. Preguntas Frecuentes
 
 **Por que no veo un cliente que acaban de registrar?**
 
