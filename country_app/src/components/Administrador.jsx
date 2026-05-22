@@ -5,6 +5,7 @@ import LogoutButton from './LogoutBoton';
 import ReservasAdmin from './administrador/ReservasAdmin';
 import HorariosPersonalizadosAdmin from './administrador/HorariosPersonalizadosAdmin';
 import BloqueosAdmin from './administrador/BloqueosAdmin';
+import DisponibilidadHorarios from './administrador/DisponibilidadHorarios';
 import { Search, Calendar, Clock, User, Loader, DollarSign, TrendingUp, TrendingDown, Download, Filter, CalendarCheck, FileText, UserPlus, Ban } from 'lucide-react';
 import '../CSS/AdminPanel.css';
 import useAutoRefresh from '../hooks/useAutoRefresh';
@@ -156,6 +157,13 @@ const AdminPanel = () => {
           <Ban size={20} />
           Bloqueos
         </button>
+        <button
+          className={`tab-button ${activeTab === 'disponibilidad' ? 'active' : ''}`}
+          onClick={() => setActiveTab('disponibilidad')}
+        >
+          <Clock size={20} />
+          Disponibilidad
+        </button>
       </div>
 
       {/* CONTENIDO: render components that provide the actual data/views */}
@@ -171,6 +179,10 @@ const AdminPanel = () => {
 
       {activeTab === 'bloqueos' && (
         <BloqueosAdmin />
+      )}
+
+      {activeTab === 'disponibilidad' && (
+        <DisponibilidadHorarios />
       )}
 
       {activeTab === 'contabilidad' && (

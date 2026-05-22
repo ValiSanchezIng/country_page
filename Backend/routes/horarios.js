@@ -385,6 +385,93 @@ router.get('/ocupacion/:fecha', async (req, res) => {
 router.get('/ocupacion/:fecha', async (req, res) => {
   const { fecha } = req.params;    try {    const fechaObj = new Date(fecha);    const diasSemana = ['domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado'];    const diaSemana = diasSemana[fechaObj.getDay()];        const [ocupacion] = await db.execute(`      SELECT         h.id,        h.hora,        h.turno,        h.dia_semana,        COALESCE(reservas.total, 0) as ocupadas,        6 as capacidad_maxima,        (6 - COALESCE(reservas.total, 0)) as disponibles,        ROUND((COALESCE(reservas.total, 0) / 6) * 100, 2) as porcentaje_ocupacion      FROM horarios h      LEFT JOIN (        SELECT horario, COUNT(*) as total        FROM reservas r        JOIN clases c ON r.clase_id = c.id        WHERE r.fecha = ? AND r.estado = 'confirmada' AND c.tipo != 'salto'        GROUP BY horario      ) reservas ON TIME_FORMAT(h.hora, '%H:%i') = reservas.horario      WHERE h.dia_semana = ? AND h.disponible = 1      ORDER BY h.hora    `, [fecha, diaSemana]);        res.json({      fecha,      dia_semana: diaSemana,      horarios: ocupacion    });  } catch (err) {    console.error('Error obteniendo ocupación de horarios:', err);    res.status(500).json({ error: "Error en el servidor obteniendo ocupación" });  }});
 
+// =============================================================================
+// FRANJAS HORARIAS (activar / desactivar de forma permanente y recurrente)
+// =============================================================================
+
+// GET /api/horarios/slots - Listar franjas horarias agrupadas por hora de inicio
+// Devuelve, por cada hora de inicio, cuántas filas de horarios_clase existen
+// y cuántas están activas (en todas las clases/días). Sirve para mostrar el
+// estado de cada franja en el panel admin y poder activarla/desactivarla.
+router.get('/slots', async (req, res) => {
+  try {
+    const [rows] = await db.execute(`
+      SELECT
+        TIME_FORMAT(hc.hora_inicio, '%H:%i') AS hora_inicio,
+        COUNT(*) AS total,
+        SUM(CASE WHEN hc.activo = 1 THEN 1 ELSE 0 END) AS activos,
+        GROUP_CONCAT(DISTINCT c.nombre ORDER BY c.nombre SEPARATOR ', ') AS clases
+      FROM horarios_clase hc
+      INNER JOIN clases c ON hc.clase_id = c.id
+      GROUP BY TIME_FORMAT(hc.hora_inicio, '%H:%i')
+      ORDER BY MIN(hc.hora_inicio) ASC
+    `);
+
+    // Normalizar a números (mysql2 puede devolver SUM/COUNT como string)
+    const franjas = rows.map(r => {
+      const total = Number(r.total);
+      const activos = Number(r.activos);
+      return {
+        hora_inicio: r.hora_inicio,
+        total,
+        activos,
+        inactivos: total - activos,
+        // 'activa' si al menos una fila sigue activa; 'inactiva' si todas están en 0
+        estado: activos > 0 ? 'activa' : 'inactiva',
+        clases: r.clases
+      };
+    });
+
+    res.json(franjas);
+  } catch (err) {
+    console.error('Error obteniendo franjas horarias:', err);
+    res.status(500).json({ error: 'Error obteniendo franjas horarias' });
+  }
+});
+
+// PUT /api/horarios/slots/activo - Activar/desactivar TODAS las clases de una franja
+// Body: { hora_inicio: 'HH:MM', activo: 0 | 1 }
+// Afecta todas las filas de horarios_clase con esa hora de inicio (todas las
+// clases y todos los días). Es reversible y NO toca reservas ya existentes:
+// solo controla la visibilidad/disponibilidad para nuevas reservas.
+router.put('/slots/activo', async (req, res) => {
+  const { hora_inicio, activo } = req.body;
+
+  if (!hora_inicio || !/^\d{2}:\d{2}$/.test(hora_inicio)) {
+    return res.status(400).json({ error: 'hora_inicio inválida (formato esperado HH:MM)' });
+  }
+  if (activo !== 0 && activo !== 1 && activo !== '0' && activo !== '1') {
+    return res.status(400).json({ error: 'activo debe ser 0 o 1' });
+  }
+
+  const activoVal = Number(activo) === 1 ? 1 : 0;
+
+  try {
+    const [result] = await db.execute(
+      `UPDATE horarios_clase
+         SET activo = ?
+       WHERE TIME_FORMAT(hora_inicio, '%H:%i') = ?`,
+      [activoVal, hora_inicio]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: `No existen clases en la franja ${hora_inicio}` });
+    }
+
+    res.json({
+      message: activoVal === 1
+        ? `Franja ${hora_inicio} habilitada (${result.affectedRows} clase(s))`
+        : `Franja ${hora_inicio} deshabilitada (${result.affectedRows} clase(s))`,
+      hora_inicio,
+      activo: activoVal,
+      afectadas: result.affectedRows
+    });
+  } catch (err) {
+    console.error('Error actualizando franja horaria:', err);
+    res.status(500).json({ error: 'Error actualizando franja horaria' });
+  }
+});
+
 // GET /api/horarios/clases - Obtener todas las clases disponibles
 router.get('/clases', async (req, res) => {
   try {
