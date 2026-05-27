@@ -7,6 +7,26 @@ import { useState, useEffect, useRef } from 'react'
 import './css/weekly-calendar.css'
 import { DateTime } from 'luxon'
 
+// === Interruptor reversible: SOLO_SLOTS_UNA_HORA ===
+// Cuando es true, el calendario solo genera slots de 1 hora a partir de los horarios GENERALES.
+// Los slots de media hora solo aparecen para el usuario que tiene un horario PERSONALIZADO de
+// media hora (la excepción). Para REVERTIR este comportamiento, cambiar a false.
+const SOLO_SLOTS_UNA_HORA = true;
+
+// === Interruptor reversible: DESCONTAR_INSTRUCTORAS_EN_OTRA_CLASE ===
+// Cuando es true, un slot se bloquea si todas las instructoras disponibles a esa hora ya están
+// dando OTRA clase distinta (una instructora no puede impartir dos clases a la vez). Si están
+// dando ESTA misma clase, no cuenta (el alumno se suma a su grupo). Para REVERTIR, cambiar a false.
+const DESCONTAR_INSTRUCTORAS_EN_OTRA_CLASE = true;
+
+// Determina si un horario dura exactamente 1 hora (60 min) a partir de hora_inicio/hora_fin "HH:MM".
+const esSlotDeUnaHora = (h) => {
+  if (!h || !h.hora_inicio || !h.hora_fin) return true; // sin datos suficientes: no filtrar
+  const [hi, mi] = h.hora_inicio.split(':').map(Number);
+  const [hf, mf] = h.hora_fin.split(':').map(Number);
+  return ((hf * 60 + mf) - (hi * 60 + mi)) === 60;
+};
+
 // Función helper para obtener fecha en formato YYYY-MM-DD sin problemas de zona horaria
 const getDateString = (date) => {
   if (!date) return null;
@@ -216,10 +236,14 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
   const getTimeSlotsForDay = (dayName, realDate) => {
     const slotsMap = new Set();
     
-    // 1. Horarios Generales
+    // 1. Horarios Generales (solo de 1 hora cuando SOLO_SLOTS_UNA_HORA está activo).
+    //    Los slots de media hora del propio usuario se agregan en el paso 2 (personalizados).
     const horariosDelDia = dynamicSchedule.horarios[dayName];
     if (horariosDelDia && Array.isArray(horariosDelDia)) {
-      horariosDelDia.forEach(h => slotsMap.add(h.hora_inicio));
+      horariosDelDia.forEach(h => {
+        if (SOLO_SLOTS_UNA_HORA && !esSlotDeUnaHora(h)) return;
+        slotsMap.add(h.hora_inicio);
+      });
     }
     
     // 2. Horarios Personalizados
@@ -320,17 +344,38 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       // Consultar disponibilidad de instructoras para este slot (siempre que exista el mapa)
       const availabilityKey = `${slotDateStr}|${time}`;
       const instructorasDisponibles = instructorAvailabilityMap[availabilityKey];
+
+      // Descontar instructoras que ya están dando OTRA clase distinta (no iniciación/ponyclub) en
+      // este mismo horario: no pueden impartir dos clases a la vez. Si están dando ESTA misma clase,
+      // no se descuentan (el alumno se suma a su grupo hasta el cupo del horario).
+      let ocupadasEnOtraClase = 0;
+      if (DESCONTAR_INSTRUCTORAS_EN_OTRA_CLASE && Array.isArray(allWeekBookings)) {
+        const idsOcupadas = new Set();
+        allWeekBookings.forEach(b => {
+          if (!b.fecha || !b.hora_inicio || !b.clase_nombre) return;
+          if (b.fecha.split('T')[0] !== slotDateStr) return;
+          if (b.hora_inicio.slice(0, 5) !== time) return;
+          if (b.estatus !== 'pendiente' && b.estatus !== 'confirmada') return;
+          const claseB = b.clase_nombre.toLowerCase();
+          if (claseB === className.toLowerCase()) return;          // misma clase: no bloquea (agrupa)
+          if (['iniciacion', 'ponyclub'].includes(claseB)) return; // iniciación/ponyclub no bloquean
+          idsOcupadas.add(`${b.instructora_nombre || ''} ${b.instructora_apellido || ''}`.trim());
+        });
+        ocupadasEnOtraClase = idsOcupadas.size;
+      }
+
       // Determinar bloqueo y capacidad efectiva basada en disponibilidad de instructoras
       let blockedByInstructor = false;
       let effectiveCapacity = capacity;
 
       if (typeof instructorasDisponibles === 'number') {
-        if (instructorasDisponibles <= 0) {
+        const disponiblesReales = instructorasDisponibles - ocupadasEnOtraClase;
+        if (disponiblesReales <= 0) {
           blockedByInstructor = true;
           effectiveCapacity = 0;
         } else if (isPersonalized) {
           // Reservas personalizadas: el cupo sigue limitado por instructoras (slot 1:1).
-          effectiveCapacity = Math.min(capacity, instructorasDisponibles);
+          effectiveCapacity = Math.min(capacity, disponiblesReales);
         } else {
           effectiveCapacity = capacity;
         }
