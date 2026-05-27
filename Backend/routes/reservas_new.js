@@ -799,7 +799,14 @@ router.get('/available-slots/:clienteId', async (req, res) => {
     }
 
     const tipoCliente = cliente[0].tipo_cliente;
-
+    // Auto-actualizar reservas pasadas antes de verificar restricciones
+    await db.query(`
+      UPDATE reservas 
+      SET estatus = 'completada'
+      WHERE cliente_id = ?
+      AND estatus IN ('pendiente', 'confirmada')
+      AND CONCAT(fecha, ' ', hora_fin) + INTERVAL 30 MINUTE < NOW()
+    `, [clienteId]);
     // Verificar restricciones del cliente
     const restricciones = await verificarRestriccionesCliente(clienteId, fecha, tipoCliente);
     if (!restricciones.permitido) {
@@ -910,6 +917,16 @@ router.post('/book', async (req, res) => {
   }
 
   try {
+    // Auto-actualizar reservas pasadas antes de verificar restricciones
+    await db.query(`
+      UPDATE reservas 
+      SET estatus = 'completada'
+      WHERE cliente_id = ?
+      AND estatus IN ('pendiente', 'confirmada')
+      AND CONCAT(fecha, ' ', hora_fin) + INTERVAL 30 MINUTE < NOW()
+    `, [cliente_id]);
+
+    // Verificar que la reserva sea al menos 2 horas antes (zona horaria Cancún)
     // Verificar que la reserva sea al menos 2 horas antes (zona horaria Cancún)
     // Requiere: npm install luxon
     const ahora = DateTime.now().setZone('America/Cancun');
