@@ -10,6 +10,7 @@ import RegistroUsuarios from "./components/RegistroUsuarios";
 import InstructorClases from "./components/InstructorClases";  
 import Contabilidad from "./components/Contabilidad";
 import Admin from "./components/Administrador";
+import SinVista from "./components/SinVista";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -47,6 +48,9 @@ function App() {
             <Admin />
           </ProtectedRoute>
         } />
+        {/* Respaldo: cualquier ruta inexistente (p. ej. roles sin vista asignada)
+            muestra una pantalla con opción de cerrar sesión, evitando quedar atrapado */}
+        <Route path="*" element={<SinVista />} />
       </Routes>
     </Router>
   );

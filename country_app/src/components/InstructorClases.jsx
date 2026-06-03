@@ -67,19 +67,25 @@ export default function InstructorClases() {
         <div style={{ textAlign: 'center' }}>
           <h3>Error al cargar los datos</h3>
           <p>{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#007bff',
-              color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              cursor: 'pointer'
-            }}
-          >
-            Reintentar
-          </button>
+          <p style={{ color: '#6b7280', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            Si este no es tu panel, cierra sesión e ingresa con otro usuario.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#007bff',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer'
+              }}
+            >
+              Reintentar
+            </button>
+            <LogoutButton showUserName={false} />
+          </div>
         </div>
       </div>
     )
