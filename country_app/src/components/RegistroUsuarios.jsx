@@ -14,6 +14,7 @@ import {
   Edit,
   X,
   Check,
+  Search,
 } from "lucide-react";
 import LogoutButton from "./LogoutBoton";
 import useUsuarios from "../hooks/useUsuarios";
@@ -294,6 +295,30 @@ const UsuarioRow = React.memo(
           </div>
         </td>
         <td>{usuario.rol}</td>
+        <td>
+          {usuario.rol === "cliente" ? (
+            usuario.tipo_nivel ? (
+              <span
+                style={{
+                  display: "inline-block",
+                  padding: "3px 10px",
+                  borderRadius: "12px",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  textTransform: "capitalize",
+                  background: "rgba(156, 175, 136, 0.15)",
+                  color: "#5a7247",
+                }}
+              >
+                {usuario.tipo_nivel === "iniciacion" ? "Iniciación" : usuario.tipo_nivel}
+              </span>
+            ) : (
+              <span style={{ color: "#999", fontStyle: "italic" }}>Sin nivel</span>
+            )
+          ) : (
+            <span style={{ color: "#ccc" }}>—</span>
+          )}
+        </td>
         <td>
           {new Date(usuario.fecha_registro).toLocaleDateString("es-ES", {
             year: "numeric",
@@ -1101,6 +1126,7 @@ const TablaUsuarios = React.memo(({ usuarios, loading, onRecargar }) => {
   const [visiblePasswords, setVisiblePasswords] = useState({});
   const [editingPasswords, setEditingPasswords] = useState({});
   const [passwordEdits, setPasswordEdits] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
 
   const handleChange = useCallback((id, value) => {
     setEdits((prev) => ({ ...prev, [id]: value }));
@@ -1269,8 +1295,22 @@ const TablaUsuarios = React.memo(({ usuarios, loading, onRecargar }) => {
     });
   }, []);
 
+  const usuariosFiltrados = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return usuarios;
+    return usuarios.filter((u) => {
+      const campos = [
+        u.nombre, u.apellido,
+        `${u.nombre || ""} ${u.apellido || ""}`,
+        u.correo, u.username, u.rol, u.tipo_nivel,
+        String(u.id),
+      ];
+      return campos.some((c) => (c || "").toString().toLowerCase().includes(q));
+    });
+  }, [usuarios, searchTerm]);
+
   const usuariosConCambios = useMemo(() => {
-    return usuarios.map((usuario) => {
+    return usuariosFiltrados.map((usuario) => {
       const emailChanged =
         edits[usuario.id] && edits[usuario.id] !== usuario.correo;
       const passwordChanged =
@@ -1288,21 +1328,49 @@ const TablaUsuarios = React.memo(({ usuarios, loading, onRecargar }) => {
         isPasswordInvalid,
       };
     });
-  }, [usuarios, edits, editingPasswords, passwordEdits]);
+  }, [usuariosFiltrados, edits, editingPasswords, passwordEdits]);
 
   return (
     <div className="user-table-section">
       <div className="section-header">
         <h3>
-          <User size={24} /> Usuarios Registrados ({usuarios.length})
+          <User size={24} /> Usuarios Registrados ({usuariosFiltrados.length}{searchTerm ? ` de ${usuarios.length}` : ""})
         </h3>
         <p>Listado completo de usuarios en el sistema</p>
+      </div>
+
+      {/* Buscador de usuarios */}
+      <div style={{ position: "relative", margin: "0 0 1rem", maxWidth: 420 }}>
+        <Search size={18} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#999", pointerEvents: "none" }} />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Buscar por nombre, correo, usuario, rol o ID..."
+          autoComplete="off"
+          style={{ width: "100%", padding: "0.55rem 2rem 0.55rem 2.4rem", borderRadius: 8, border: "1px solid #ccc", fontSize: "0.9rem", boxSizing: "border-box" }}
+        />
+        {searchTerm && (
+          <button
+            type="button"
+            onClick={() => setSearchTerm("")}
+            style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#999", display: "flex" }}
+            aria-label="Limpiar búsqueda"
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
 
       {usuarios.length === 0 ? (
         <div className="empty-state">
           <User size={48} />
           <p>No hay usuarios registrados</p>
+        </div>
+      ) : usuariosFiltrados.length === 0 ? (
+        <div className="empty-state">
+          <User size={48} />
+          <p>No se encontraron usuarios para "{searchTerm}"</p>
         </div>
       ) : (
         <div className="table-container">
@@ -1314,6 +1382,7 @@ const TablaUsuarios = React.memo(({ usuarios, loading, onRecargar }) => {
                 <th>Email</th>
                 <th>Credenciales</th>
                 <th>Rol</th>
+                <th>Nivel</th>
                 <th>Fecha Registro</th>
                 <th>Acción</th>
               </tr>
@@ -1375,7 +1444,7 @@ const GestionUsuarios = React.memo(() => {
   );
 
   const handleLogout = useCallback(() => {
-    localStorage.removeItem("token");
+    sessionStorage.removeItem("token");
     sessionStorage.clear();
     window.location.href = "/login";
   }, []);

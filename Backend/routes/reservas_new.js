@@ -119,10 +119,17 @@ const calcularInstructorasDisponibles = async (clase_id, fecha, hora_inicio) => 
         )
     `, [...idsInstructoras, diaSemanaMySQL, fechaMySQL]);
     
-    // Filtrar instructoras en descanso
+    // MODELO DE NEGOCIO: una misma instructora puede atender varios niveles en el MISMO
+    // horario (arena mixta), respetando el cupo de cada nivel por separado. Por eso una
+    // instructora cuenta como disponible para un slot si está 'disponible', es apta para la
+    // clase y el horario cae dentro de su jornada (todo ello ya filtrado arriba). NO se le
+    // descuenta por estar dando otra clase a esta misma hora: sigue disponible para los
+    // demás niveles del slot. Lo único que la descuenta es estar en descanso ese día/fecha.
     const instructorasEnDescanso = new Set(descansosEncontrados.map(d => d.instructora_id));
-    const instructorasDisponibles = todasAptas.filter(i => !instructorasEnDescanso.has(i.id));
-    
+    const instructorasDisponibles = todasAptas.filter(i =>
+      !instructorasEnDescanso.has(i.id)
+    );
+
     return Math.max(0, instructorasDisponibles.length);
   } catch (err) {
     console.error('Error calculando instructoras disponibles:', err);
@@ -277,6 +284,47 @@ const verificarDisponibilidadCaballo = async (caballoId, fecha, horaInicio, hora
   }
 };
 
+// Resolver el cupo efectivo de un slot aplicando los ajustes del administrador
+// (capacidad_overrides). Prioridad: 'dia' (fecha exacta) > 'semanal' (día de la
+// semana) > 'fijo'. Para cada nivel, un override con hora_inicio específica gana
+// sobre uno con hora_inicio NULL (aplica a toda la clase). Se usa capacidad_abs si
+// está definida; si no, cupoBase + delta. El resultado nunca es menor que 0.
+const resolverCupoEfectivo = async (claseId, cupoBase, fecha, horaInicio) => {
+  try {
+    const diaSemana = getDiaSemanaMySQL(fecha);
+    const [overrides] = await db.query(`
+      SELECT tipo, hora_inicio, delta, capacidad_abs
+      FROM capacidad_overrides
+      WHERE activo = 1
+        AND clase_id = ?
+        AND (hora_inicio IS NULL OR hora_inicio = ?)
+        AND (
+          (tipo = 'dia' AND fecha = ?) OR
+          (tipo = 'semanal' AND dia_semana = ?) OR
+          (tipo = 'fijo')
+        )
+    `, [claseId, horaInicio, formatDateForMySQL(fecha), diaSemana]);
+
+    if (!overrides || overrides.length === 0) return cupoBase;
+
+    const prioridadTipo = { dia: 3, semanal: 2, fijo: 1 };
+    // Elegir el override más específico: primero por tipo, luego por hora_inicio definida.
+    overrides.sort((a, b) => {
+      const pt = (prioridadTipo[b.tipo] || 0) - (prioridadTipo[a.tipo] || 0);
+      if (pt !== 0) return pt;
+      return (b.hora_inicio ? 1 : 0) - (a.hora_inicio ? 1 : 0);
+    });
+    const elegido = overrides[0];
+    const cupo = elegido.capacidad_abs != null
+      ? elegido.capacidad_abs
+      : cupoBase + (elegido.delta || 0);
+    return Math.max(0, cupo);
+  } catch (err) {
+    console.error('Error resolviendo cupo efectivo:', err);
+    return cupoBase;
+  }
+};
+
 // Verificar restricciones por tipo de cliente
 const verificarRestriccionesCliente = async (clienteId, fecha, tipoCliente) => {
   try {
@@ -334,6 +382,20 @@ const verificarRestriccionesCliente = async (clienteId, fecha, tipoCliente) => {
           razon: 'Ya tienes una reserva activa. Solo se permite una reserva demo a la vez' 
         };
       }
+      return { permitido: true };
+    }
+
+    // RESERVA SEMANAL (sólo avanzado con permiso): el administrador puede habilitar
+    // que un cliente avanzado reserve varias clases en la misma semana.
+    const [infoCliente] = await db.query(`
+      SELECT permite_reserva_semanal, tipo_nivel FROM usuarios WHERE id = ?
+    `, [clienteId]);
+    const permiteSemanal = infoCliente.length > 0 && Number(infoCliente[0].permite_reserva_semanal) === 1;
+    const esAvanzado = infoCliente.length > 0 && infoCliente[0].tipo_nivel === 'avanzado';
+
+    if (permiteSemanal && esAvanzado) {
+      // Sin límite de "1 activa": puede llenar su semana. Se mantienen el cupo del
+      // horario y el plazo, que se validan aparte en el endpoint.
       return { permitido: true };
     }
 
@@ -926,8 +988,19 @@ router.post('/book', async (req, res) => {
       AND CONCAT(fecha, ' ', hora_fin) + INTERVAL 30 MINUTE < NOW()
     `, [cliente_id]);
 
-    // Verificar que la reserva sea al menos 2 horas antes (zona horaria Cancún)
-    // Verificar que la reserva sea al menos 2 horas antes (zona horaria Cancún)
+    // Obtener tipo de cliente temprano: propietario/renta no dependen del plazo ni del cupo.
+    const [clientePlazo] = await db.query(`
+      SELECT tipo_cliente FROM usuarios WHERE id = ?
+    `, [cliente_id]);
+    if (clientePlazo.length === 0) {
+      return res.status(404).json({ error: 'Cliente no encontrado' });
+    }
+    const tipoClienteReserva = clientePlazo[0].tipo_cliente;
+    const sinLimites = tipoClienteReserva === 'propietario' || tipoClienteReserva === 'renta';
+
+    // Plazo de reserva único: hasta las 10:00 PM del día ANTERIOR a la clase
+    // (zona horaria Cancún). Aplica a todas las clases (mañana y tarde).
+    // Propietario/Renta quedan exentos (pueden reservar cuando quieran).
     // Requiere: npm install luxon
     const ahora = DateTime.now().setZone('America/Cancun');
     const [year, month, day] = fecha.split('-').map(Number);
@@ -943,21 +1016,13 @@ router.post('/book', async (req, res) => {
     const horaClase = Number(hora);
     const esMañana = horaClase < 12;
 
-    if (esMañana) {
+    if (!sinLimites) {
       const limiteReserva = fechaHoraReserva
         .minus({ days: 1 })
-        .set({ hour: 21, minute: 0, second: 0, millisecond: 0 });
+        .set({ hour: 22, minute: 0, second: 0, millisecond: 0 });
       if (ahora > limiteReserva) {
         return res.status(400).json({
-          error: 'Las reservas para clases de la mañana deben hacerse antes de las 9:00 PM del día anterior.'
-        });
-      }
-    } else {
-      const limiteReserva = fechaHoraReserva
-        .set({ hour: 13, minute: 0, second: 0, millisecond: 0 });
-      if (ahora > limiteReserva) {
-        return res.status(400).json({
-          error: 'Las reservas para clases de la tarde deben hacerse antes de la 1:00 PM del mismo día.'
+          error: 'Las reservas deben hacerse antes de las 10:00 PM del día anterior a la clase.'
         });
       }
     }
@@ -983,16 +1048,8 @@ router.post('/book', async (req, res) => {
       });
     }
 
-    // Obtener información del cliente
-    const [cliente] = await db.query(`
-      SELECT tipo_cliente FROM usuarios WHERE id = ?
-    `, [cliente_id]);
-
-    if (cliente.length === 0) {
-      return res.status(404).json({ error: 'Cliente no encontrado' });
-    }
-
-    const tipoCliente = cliente[0].tipo_cliente;
+    // Tipo de cliente ya obtenido arriba (tipoClienteReserva)
+    const tipoCliente = tipoClienteReserva;
 
     // Verificar restricciones del cliente
     const restricciones = await verificarRestriccionesCliente(cliente_id, fecha, tipoCliente);
@@ -1019,32 +1076,30 @@ router.post('/book', async (req, res) => {
     horaFinObj.setMinutes(horaFinObj.getMinutes() + infoClase.duracion_min);
     const hora_fin = horaFinObj.toTimeString().slice(0, 8);
 
-    // El cupo se mantiene como está configurado (cupo_max). El número de instructoras
-    // disponibles ya no recorta el cupo del slot — pero para iniciacion/ponyclub aún
-    // bloqueamos si NINGUNA instructora está disponible en ese horario.
-    let cupoMaximoAjustado = infoClase.cupo_max;
+    // El cupo depende SÓLO de los espacios disponibles, no de las instructoras.
+    // (Se eliminó el bloqueo por falta de instructoras en iniciacion/ponyclub;
+    //  la asignación automática de instructora se mantiene más abajo.)
+    // Se aplican los ajustes de espacios configurados por el administrador
+    // (capacidad_overrides: fijo / semanal / por día).
+    let cupoMaximoAjustado = await resolverCupoEfectivo(
+      clase_id, infoClase.cupo_max, fecha, hora_inicio
+    );
 
-    if (['iniciacion', 'ponyclub'].includes(infoClase.nombre.toLowerCase())) {
-      const instructorasDisponibles = await calcularInstructorasDisponibles(clase_id, fecha, hora_inicio);
-      if (instructorasDisponibles === 0) {
+    // Propietario/Renta no dependen del cupo: pueden reservar cuando quieran.
+    if (!sinLimites) {
+      // Verificar cupo disponible
+      const [reservasExistentes] = await db.query(`
+        SELECT COUNT(*) as ocupadas FROM reservas
+        WHERE fecha = ? AND clase_id = ?
+        AND hora_inicio = ?
+        AND estatus IN ('pendiente', 'confirmada')
+      `, [formatDateForMySQL(fecha), clase_id, hora_inicio]);
+
+      if (reservasExistentes[0].ocupadas >= cupoMaximoAjustado) {
         return res.status(400).json({
-          error: 'No hay instructoras disponibles para este horario'
+          error: 'No hay espacios disponibles en este horario'
         });
       }
-    }
-
-    // Verificar cupo disponible
-    const [reservasExistentes] = await db.query(`
-      SELECT COUNT(*) as ocupadas FROM reservas
-      WHERE fecha = ? AND clase_id = ?
-      AND hora_inicio = ?
-      AND estatus IN ('pendiente', 'confirmada')
-    `, [formatDateForMySQL(fecha), clase_id, hora_inicio]);
-
-    if (reservasExistentes[0].ocupadas >= cupoMaximoAjustado) {
-      return res.status(400).json({ 
-        error: 'No hay espacios disponibles en este horario' 
-      });
     }
 
     // ===================== ASIGNACIÓN AUTOMÁTICA DE INSTRUCTORA =====================
@@ -1082,14 +1137,16 @@ router.post('/book', async (req, res) => {
 
     // Si NO se asignó por horario personalizado, usar lógica automática
     if (!instructora_id) {
-      // REGLA ESPECIAL PARA INICIACIÓN/PONYCLUB: Una instructora por alumno
-      const esIniciacion = ['iniciacion', 'ponyclub'].includes(infoClase.nombre.toLowerCase());
-
-      if (!esIniciacion) {
-        // Para clases que NO son iniciación/ponyclub: buscar si hay una instructora que ya tiene alumnos en este slot
+      // AGRUPACIÓN: si ya hay una instructora dando ESTA misma clase a esta hora y su grupo
+      // no está lleno, se suma el alumno a ese grupo. Aplica a TODAS las clases, incluida
+      // iniciación/ponyclub: el cupo del horario (cupo_max) permite varios alumnos con la
+      // misma instructora. Importante: esta búsqueda NO excluye a quien tenga otra clase en
+      // el mismo horario, porque esa instructora YA está presente dando esta clase (solo se
+      // le suma un alumno más al grupo existente, no se le inicia una clase nueva).
+      {
         const diaSemanaMySQL = getDiaSemanaMySQL(fecha);
         const fechaMySQL = formatDateForMySQL(fecha);
-        
+
         const [instructoraActual] = await db.query(`
           SELECT DISTINCT r.instructora_id, COUNT(*) as alumnos_en_slot
           FROM reservas r
@@ -1134,9 +1191,6 @@ router.post('/book', async (req, res) => {
           instructora_id = instructoraActual[0].instructora_id;
           // Asignando a instructora existente en el slot
         }
-      } else {
-        // Para INICIACIÓN: NO buscar instructoras con alumnos, siempre asignar una nueva
-        // Clase de iniciación - cada alumno tendrá su propia instructora
       }
     }
 
@@ -1186,14 +1240,11 @@ router.post('/book', async (req, res) => {
               (d.es_recurrente = 0 AND ? BETWEEN d.fecha_inicio AND d.fecha_fin)
             )
           )
-          AND i.id NOT IN (
-            SELECT r.instructora_id FROM reservas r
-            JOIN clases cl_blk ON cl_blk.id = r.clase_id
-            WHERE r.fecha = ?
-              AND r.hora_inicio = ?
-              AND r.estatus IN ('pendiente','confirmada')
-              AND LOWER(cl_blk.nombre) NOT IN ('iniciacion','ponyclub')
-          )
+          -- MODELO DE NEGOCIO: NO se excluye a una instructora por estar dando otra clase a
+          -- esta misma hora. Una misma instructora puede cubrir varios niveles en simultáneo
+          -- (arena mixta) respetando el cupo de cada nivel, así que sigue siendo candidata
+          -- aunque ya tenga otra clase en este slot. (Antes esta exclusión bloqueaba reservar
+          -- iniciación/avanzado en cuanto la única instructora del turno daba intermedio.)
         ORDER BY clases_consecutivas ASC, reservas_semana ASC, i.id ASC
       `, [
         fecha, fecha, fecha, fecha, // para calcular semana de la reserva
@@ -1201,9 +1252,7 @@ router.post('/book', async (req, res) => {
         clase_id,
         diaSemanaMySQL, formatTimeForMySQL(hora_inicio), formatTimeForMySQL(hora_inicio), // para horarios disponibles
         diaSemanaMySQL, // para descansos recurrentes
-        fechaMySQL, // para descansos no recurrentes
-        fecha,
-        hora_inicio
+        fechaMySQL // para descansos no recurrentes
       ]);
 
       if (candidatas.length > 0) {
@@ -1738,24 +1787,35 @@ router.get('/instructor/my-classes/:instructoraId', async (req, res) => {
 // Asignar caballo a reserva (SOLO instructora)
 router.put('/instructor/:reservaId/assign-horse', async (req, res) => {
   const { reservaId } = req.params;
-  const { caballo_id, instructora_id } = req.body;
+  const { caballo_id, instructora_id, actividad, observaciones } = req.body;
 
   if (!instructora_id) {
-    return res.status(400).json({ 
-      error: 'Falta campo requerido: instructora_id' 
+    return res.status(400).json({
+      error: 'Falta campo requerido: instructora_id'
     });
   }
 
   try {
-    // Verificar que la reserva existe y pertenece a la instructora
-    const [reserva] = await db.query(`
-      SELECT fecha, hora_inicio, hora_fin, clase_id FROM reservas 
-      WHERE id = ? AND instructora_id = ?
-    `, [reservaId, instructora_id]);
+    // El instructor admin puede editar cualquier reserva; el general sólo las suyas.
+    const [tipoRows] = await db.query(
+      `SELECT tipo_instructor FROM instructoras WHERE id = ?`, [instructora_id]
+    );
+    const esInstructorAdmin = tipoRows.length > 0 && tipoRows[0].tipo_instructor === 'admin';
+
+    // Verificar que la reserva existe (y pertenece a la instructora, salvo admin)
+    const [reserva] = esInstructorAdmin
+      ? await db.query(
+          `SELECT fecha, hora_inicio, hora_fin, clase_id FROM reservas WHERE id = ?`,
+          [reservaId]
+        )
+      : await db.query(
+          `SELECT fecha, hora_inicio, hora_fin, clase_id FROM reservas WHERE id = ? AND instructora_id = ?`,
+          [reservaId, instructora_id]
+        );
 
     if (reserva.length === 0) {
-      return res.status(404).json({ 
-        error: 'Reserva no encontrada o no tienes permisos para modificarla' 
+      return res.status(404).json({
+        error: 'Reserva no encontrada o no tienes permisos para modificarla'
       });
     }
 
@@ -1880,10 +1940,15 @@ router.put('/instructor/:reservaId/assign-horse', async (req, res) => {
       }
     }
 
-    // Asignar (o remover) el caballo
+    // Asignar (o remover) el caballo y, si vienen, la actividad y observaciones.
+    // COALESCE conserva el valor previo cuando el campo no se envía (undefined -> null).
     await db.query(`
-      UPDATE reservas SET caballo_id = ? WHERE id = ?
-    `, [caballo_id || null, reservaId]);
+      UPDATE reservas
+      SET caballo_id = ?,
+          actividad = COALESCE(?, actividad),
+          observaciones = COALESCE(?, observaciones)
+      WHERE id = ?
+    `, [caballo_id || null, actividad ?? null, observaciones ?? null, reservaId]);
 
     // Devolver la reserva actualizada
     const [rows] = await db.query(`
@@ -1891,6 +1956,7 @@ router.put('/instructor/:reservaId/assign-horse', async (req, res) => {
         r.id, r.fecha AS date,
         DATE_FORMAT(r.hora_inicio, '%H:%i') AS time,
         r.estatus AS status,
+        r.actividad, r.observaciones,
         u.nombre AS student, u.edad AS studentAge, u.tipo_nivel AS studentLevel,
         cl.nombre AS type,
         cab.nombre AS caballo_nombre
@@ -1905,6 +1971,44 @@ router.put('/instructor/:reservaId/assign-horse', async (req, res) => {
   } catch (err) {
     console.error('Error asignando caballo:', err);
     res.status(500).json({ error: 'Error al asignar caballo' });
+  }
+});
+
+// Actualizar SÓLO la actividad y observaciones de la sesión (sin tocar el caballo).
+// El instructor admin puede editar cualquier reserva; el general sólo las suyas.
+router.put('/instructor/:reservaId/session', async (req, res) => {
+  const { reservaId } = req.params;
+  const { instructora_id, actividad, observaciones } = req.body;
+
+  if (!instructora_id) {
+    return res.status(400).json({ error: 'Falta campo requerido: instructora_id' });
+  }
+
+  try {
+    const [tipoRows] = await db.query(
+      `SELECT tipo_instructor FROM instructoras WHERE id = ?`, [instructora_id]
+    );
+    const esInstructorAdmin = tipoRows.length > 0 && tipoRows[0].tipo_instructor === 'admin';
+
+    const [reserva] = esInstructorAdmin
+      ? await db.query(`SELECT id FROM reservas WHERE id = ?`, [reservaId])
+      : await db.query(`SELECT id FROM reservas WHERE id = ? AND instructora_id = ?`, [reservaId, instructora_id]);
+
+    if (reserva.length === 0) {
+      return res.status(404).json({ error: 'Reserva no encontrada o no tienes permisos para modificarla' });
+    }
+
+    await db.query(`
+      UPDATE reservas
+      SET actividad = COALESCE(?, actividad),
+          observaciones = COALESCE(?, observaciones)
+      WHERE id = ?
+    `, [actividad ?? null, observaciones ?? null, reservaId]);
+
+    res.json({ message: 'Sesión actualizada correctamente' });
+  } catch (err) {
+    console.error('Error actualizando sesión:', err);
+    res.status(500).json({ error: 'Error al actualizar la sesión' });
   }
 });
 
@@ -2078,6 +2182,7 @@ router.put('/instructor/:reservaId/attendance', async (req, res) => {
         r.id, r.fecha AS date,
         DATE_FORMAT(r.hora_inicio, '%H:%i') AS time,
         r.estatus AS status,
+        r.actividad, r.observaciones,
         u.nombre AS student, u.edad AS studentAge, u.tipo_nivel AS studentLevel,
         cl.nombre AS type,
         cab.nombre AS caballo_nombre

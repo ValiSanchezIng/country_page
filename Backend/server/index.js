@@ -15,6 +15,8 @@ import instructorasRoutes from "../routes/instructoras.js";
 import reservasAdminRoutes from "../routes/reservas_admin.js";
 import descansosRoutes from "../routes/descansos.js";
 import bloqueosRoutes from "../routes/bloqueos.js";
+import metricasRoutes from "../routes/metricas.js";
+import { enviarRecordatorios2h } from "../jobs/recordatorios.js";
 
 console.log("✅ Rutas importadas correctamente");
 
@@ -63,59 +65,33 @@ app.post("/api/login", async (req, res) => {
     const user = rows[0];
     const estado = (user.estatus || "").toLowerCase();
 
-    switch (estado) {
-      case "activo":
-        return res.json({
-          mensaje: "✅ Login correcto",
-          user: {
-            id: user.id,
-            nombre: user.nombre,
-            rol: user.rol || "cliente",
-            estatus: user.estatus,
-            tipo_nivel: user.tipo_nivel, // Agregar tipo_nivel
-            tipo_cliente: user.tipo_cliente, // Agregar tipo_cliente también
-          },
-        });
-
-      case "inactivo":
-        return res.json({
-          mensaje: "⚠️ Tu cuenta está inactiva. Comunícate con el administrador.",
-          user: { 
-            id: user.id, 
-            nombre: user.nombre, 
-            rol: user.rol, 
-            estatus: user.estatus,
-            tipo_nivel: user.tipo_nivel,
-            tipo_cliente: user.tipo_cliente,
-          },
-        });
-
-      case "bloqueado":
-        return res.status(403).json({
-          mensaje: "🚫 Tu cuenta está bloqueada y no puedes iniciar sesión.",
-          user: { 
-            id: user.id, 
-            nombre: user.nombre, 
-            rol: user.rol, 
-            estatus: user.estatus,
-            tipo_nivel: user.tipo_nivel,
-            tipo_cliente: user.tipo_cliente,
-          },
-        });
-
-      default:
-        return res.status(403).json({
-          mensaje: "❌ Estado de usuario no permitido.",
-          user: { 
-            id: user.id, 
-            nombre: user.nombre, 
-            rol: user.rol, 
-            estatus: user.estatus,
-            tipo_nivel: user.tipo_nivel,
-            tipo_cliente: user.tipo_cliente,
-          },
-        });
+    // SOLO los usuarios ACTIVOS pueden iniciar sesión.
+    // Para cualquier otro estado (inactivo, bloqueado, pendiente, etc.) NO se
+    // devuelve sesión (sin objeto `user`), de modo que no puedan ingresar.
+    if (estado === "activo") {
+      return res.json({
+        mensaje: "✅ Login correcto",
+        user: {
+          id: user.id,
+          nombre: user.nombre,
+          rol: user.rol || "cliente",
+          estatus: user.estatus,
+          tipo_nivel: user.tipo_nivel,
+          tipo_cliente: user.tipo_cliente,
+        },
+      });
     }
+
+    const mensajesPorEstado = {
+      inactivo: "⚠️ Tu cuenta está inactiva. Comunícate con el administrador.",
+      bloqueado: "🚫 Tu cuenta está bloqueada y no puedes iniciar sesión.",
+      pendiente: "⏳ Tu cuenta tiene pagos pendientes y no puedes iniciar sesión.",
+    };
+
+    return res.status(403).json({
+      mensaje: mensajesPorEstado[estado] || "❌ Tu cuenta no está activa. No puedes iniciar sesión.",
+      estatus: user.estatus,
+    });
   } catch (err) {
     console.error("❌ Error en login:", err);
     return res.status(500).json({ error: "Error interno del servidor" });
@@ -144,6 +120,7 @@ app.use("/api/reservas-admin", reservasAdminRoutes);
 app.use("/api/reservas", reservasRoutes);
 app.use("/api/descansos", descansosRoutes);
 app.use("/api/bloqueos", bloqueosRoutes);
+app.use("/api/metricas", metricasRoutes);
 
 // ========================
 // Manejo de errores
@@ -179,6 +156,10 @@ async function autoCompletarReservasPasadas() {
 // Ejecutar al arrancar y luego cada 5 minutos
 autoCompletarReservasPasadas();
 setInterval(autoCompletarReservasPasadas, 30 * 60 * 1000);
+
+// Recordatorios ~2h antes de cada clase: ejecutar al arrancar y cada 10 minutos.
+enviarRecordatorios2h();
+setInterval(enviarRecordatorios2h, 10 * 60 * 1000);
 
 // ========================
 // Iniciar servidor

@@ -30,8 +30,8 @@ export function ChangePasswordModal({ isOpen, onClose }) {
       return
     }
 
-    // Obtener datos del usuario desde localStorage
-    const userDataStr = localStorage.getItem('user');
+    // Obtener datos del usuario desde sessionStorage
+    const userDataStr = sessionStorage.getItem('user');
     if (!userDataStr) {
       toast.error('No se encontró información del usuario');
       return;

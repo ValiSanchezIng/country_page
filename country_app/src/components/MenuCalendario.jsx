@@ -221,9 +221,9 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
   const handleConfirm = async () => {
     if (!selectedSlot || !selectedClass) return;
     
-    // VALIDACIÓN DE USUARIO: Verificar que los datos del localStorage coincidan con la BD
+    // VALIDACIÓN DE USUARIO: Verificar que los datos del sessionStorage coincidan con la BD
     try {
-      const userLocal = JSON.parse(localStorage.getItem('user'));
+      const userLocal = JSON.parse(sessionStorage.getItem('user'));
       const userIdLocal = userLocal?.id;
       const nombreLocal = userLocal?.nombre;
 
@@ -239,7 +239,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
       
       // Si el usuario no existe en la BD (404), desloguear
       if (res.status === 404 || !res.ok) {
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('user');
         sessionStorage.removeItem('user');
         setSessionModal({ isOpen: true, type: 'sessionExpired' });
         return;
@@ -253,7 +253,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
       
       // Si no existe el objeto usuario, desloguear
       if (!usuarioBD) {
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('user');
         sessionStorage.removeItem('user');
         setSessionModal({ isOpen: true, type: 'sessionExpired' });
         return;
@@ -264,24 +264,24 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
 
       // Debug: Ver qué se está comparando
       console.log('🔍 VALIDACIÓN DE USUARIO:');
-      console.log('   localStorage nombre:', nombreLocal);
+      console.log('   sessionStorage nombre:', nombreLocal);
       console.log('   BD nombre:', nombreBD);
-      console.log('   localStorage tipo_nivel:', userLocal?.tipo_nivel);
+      console.log('   sessionStorage tipo_nivel:', userLocal?.tipo_nivel);
       console.log('   BD tipo_nivel:', tipoNivelBD);
 
       // Comparar nombre - si no coincide, desloguear (cambio de usuario)
       if (nombreBD !== nombreLocal) {
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('user');
         sessionStorage.removeItem('user');
         setSessionModal({ isOpen: true, type: 'sessionExpired' });
         return;
       }
 
-      // Comparar tipo_nivel - si no coincide, actualizar localStorage y refrescar
+      // Comparar tipo_nivel - si no coincide, actualizar sessionStorage y refrescar
       if (tipoNivelBD !== userLocal?.tipo_nivel) {
-        console.log('⚠️ tipo_nivel desactualizado, actualizando localStorage...');
+        console.log('⚠️ tipo_nivel desactualizado, actualizando sessionStorage...');
         
-        // Actualizar localStorage con todos los datos frescos del backend
+        // Actualizar sessionStorage con todos los datos frescos del backend
         const usuarioActualizado = {
           id: usuarioBD.id,
           nombre: usuarioBD.nombre,
@@ -291,7 +291,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
           tipo_nivel: usuarioBD.tipo_nivel
         };
         
-        localStorage.setItem('user', JSON.stringify(usuarioActualizado));
+        sessionStorage.setItem('user', JSON.stringify(usuarioActualizado));
         
         setSessionModal({ isOpen: true, type: 'levelUpdate' });
         
@@ -301,7 +301,7 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
       console.error('Error en validación de usuario:', error);
       
       // Eliminar específicamente el usuario del storage
-      localStorage.removeItem('user');
+      sessionStorage.removeItem('user');
       sessionStorage.removeItem('user');
       
       setSessionModal({ isOpen: true, type: 'sessionError' });
@@ -378,9 +378,9 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
       if (error.response && error.response.data) {
         const { error: errorMsg, razon } = error.response.data;
         
-        // Si el error es "Cliente no encontrado", significa que el ID en localStorage no existe en la BD
+        // Si el error es "Cliente no encontrado", significa que el ID en sessionStorage no existe en la BD
         if (errorMsg === 'Cliente no encontrado') {
-          localStorage.removeItem('user');
+          sessionStorage.removeItem('user');
           sessionStorage.removeItem('user');
           closeModal();
           setSessionModal({ isOpen: true, type: 'sessionExpired' });
@@ -576,7 +576,29 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
         <div className="mc-header">
           <h2 className="mc-title">Reserva tu clase</h2>
           <p className="mc-subtitle">Selecciona un horario disponible para reservar tu clase.</p>
-          
+
+          {/* Alerta in-app: reservas dentro de las próximas 2 horas (recordatorio para confirmar) */}
+          {(() => {
+            const ahora = new Date();
+            const proximas = (userBookings || []).filter(b => {
+              if (b.estatus !== 'pendiente' && b.estatus !== 'confirmada') return false;
+              if (!b.fecha || !b.hora_inicio) return false;
+              const fechaStr = new Date(b.fecha).toISOString().split('T')[0];
+              const inicio = new Date(`${fechaStr}T${b.hora_inicio.slice(0, 8)}`);
+              const diffMin = (inicio - ahora) / 60000;
+              return diffMin > 0 && diffMin <= 120;
+            });
+            if (proximas.length === 0) return null;
+            return (
+              <div style={{ marginTop: 12, padding: '10px 16px', background: '#fff3cd', borderRadius: 8, border: '2px solid #ffc107' }}>
+                <p style={{ margin: 0, fontSize: '0.95em', color: '#856404' }}>
+                  ⏰ <strong>Recordatorio:</strong> tienes {proximas.length === 1 ? 'una clase' : `${proximas.length} clases`} en menos de 2 horas
+                  {proximas[0].hora_inicio ? ` (próxima a las ${proximas[0].hora_inicio.slice(0, 5)})` : ''}. Confirma tu asistencia o cancela para liberar el espacio.
+                </p>
+              </div>
+            );
+          })()}
+
           {/* Indicador visual de tipo de cliente */}
           {userType && userType !== 'general' && (
             <div style={{ 
@@ -631,9 +653,8 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
           return (
             <div key={clase.id} style={{ marginBottom: 32, border: '1px solid #ccc', borderRadius: 8, padding: 16 }}>
               <h3 style={{ marginBottom: 8 }}>
-                {clase.nombre.charAt(0).toUpperCase() + clase.nombre.slice(1)} ({clase.duracion_min} min)
+                {clase.nombre.charAt(0).toUpperCase() + clase.nombre.slice(1)}
               </h3>
-              <p style={{ marginBottom: 8, color: '#6b4423' }}>{clase.observaciones}</p>
               <WeeklyCalendar
                 userLevel={userLevel}
                 userId={userId}
@@ -682,9 +703,9 @@ function CalendarContent({ userLevel, userId, userName, userType, onLogout, onCh
 
 function MenuCalendario() {
   // Estado del usuario (esto vendría de tu sistema de autenticación)
-  // Obtiene los datos reales del usuario desde localStorage
+  // Obtiene los datos reales del usuario desde sessionStorage
   const [userLevel, setUserLevel] = useState(() => {
-    const user = localStorage.getItem('user');
+    const user = sessionStorage.getItem('user');
     if (user) {
       try {
         const parsed = JSON.parse(user);
@@ -697,8 +718,8 @@ function MenuCalendario() {
     return 'Intermedio';
   });
   const [userId] = useState(() => {
-    // Ajusta la clave según cómo guardes el usuario en localStorage
-    const user = localStorage.getItem('user');
+    // Ajusta la clave según cómo guardes el usuario en sessionStorage
+    const user = sessionStorage.getItem('user');
     if (user) {
       try {
         const parsed = JSON.parse(user);
@@ -710,7 +731,7 @@ function MenuCalendario() {
     return 1;
   });
   const [userName] = useState(() => {
-    const user = localStorage.getItem('user');
+    const user = sessionStorage.getItem('user');
     if (user) {
       try {
         const parsed = JSON.parse(user);
@@ -722,7 +743,7 @@ function MenuCalendario() {
     return 'Usuario';
   });
   const [userType] = useState(() => {
-    const user = localStorage.getItem('user');
+    const user = sessionStorage.getItem('user');
     if (user) {
       try {
         const parsed = JSON.parse(user);
@@ -737,10 +758,10 @@ function MenuCalendario() {
 
   // Monitor de cambios de nivel en tiempo real
     useEffect(() => {
-      if (!userId || !localStorage.getItem('user')) return;
+      if (!userId || !sessionStorage.getItem('user')) return;
 
       const checkUserLevel = async () => {
-        if (!localStorage.getItem('user')) return;
+        if (!sessionStorage.getItem('user')) return;
 
         try {
           const response = await fetch(`https://elrefugiocountryclub.com/api/api/users/${userId}`);
@@ -753,8 +774,8 @@ function MenuCalendario() {
           const newLevel = userDB.tipo_nivel;
 
           if (newLevel && newLevel !== userLevel) {
-            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-            localStorage.setItem('user', JSON.stringify({
+            const currentUser = JSON.parse(sessionStorage.getItem('user') || '{}');
+            sessionStorage.setItem('user', JSON.stringify({
               ...currentUser,
               id: userDB.id,
               nombre: userDB.nombre,
@@ -815,7 +836,7 @@ function MenuCalendario() {
   const handleLogout = () => {
     console.log("Cerrando sesión...");
     // Limpiar datos de sesión
-    localStorage.clear();
+    sessionStorage.clear();
     sessionStorage.clear();
     // Redirigir al login
     window.location.href = "/login";

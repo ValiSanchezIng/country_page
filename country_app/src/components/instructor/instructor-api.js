@@ -1,6 +1,41 @@
 // API service para el panel de instructoras
 const API_BASE_URL = 'https://elrefugiocountryclub.com/api/api';
 
+// Caché corta + de-duplicación de la lista de caballos.
+// Evita que muchas filas/HorseSelect disparen decenas o cientos de peticiones
+// simultáneas a /api/caballos (lo que saturaba el navegador con
+// ERR_INSUFFICIENT_RESOURCES). Las llamadas concurrentes comparten una sola
+// petición y el resultado se reutiliza durante CABALLOS_TTL ms.
+const CABALLOS_TTL = 10000; // 10s
+let _caballosCache = { ts: 0, data: null, promise: null };
+
+const getCaballosList = async () => {
+  const ahora = Date.now();
+  if (_caballosCache.data && (ahora - _caballosCache.ts) < CABALLOS_TTL) {
+    return _caballosCache.data;
+  }
+  if (_caballosCache.promise) {
+    // Ya hay una petición en vuelo: reutilizarla en vez de lanzar otra.
+    return _caballosCache.promise;
+  }
+  _caballosCache.promise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/caballos`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
+      const data = await response.json();
+      _caballosCache = { ts: Date.now(), data, promise: null };
+      return data;
+    } catch (err) {
+      _caballosCache.promise = null; // permitir reintento en el próximo llamado
+      throw err;
+    }
+  })();
+  return _caballosCache.promise;
+};
+
 /**
  * Obtiene las clases/reservas de una instructora usando el usuario_id
  * @param {number} usuarioId - ID del usuario de la tabla usuarios
@@ -127,19 +162,7 @@ export const actualizarCaballoReserva = async (reservaId, caballoId) => {
  */
 export const obtenerCaballos = async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/caballos`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data;
+    return await getCaballosList();
   } catch (error) {
     console.error('Error al obtener caballos:', error);
     throw error;
@@ -153,9 +176,9 @@ export const obtenerCaballos = async () => {
  * @returns {Promise<Object>}
  */
 // Ahora acepta instructoraId para evitar un fetch extra
-export const asignarCaballo = async (reservaId, caballoId, instructoraId = null) => {
+export const asignarCaballo = async (reservaId, caballoId, instructoraId = null, extra = {}) => {
   try {
-    console.log('🐴 Asignando caballo:', { reservaId, caballoId });
+    console.log('🐴 Asignando caballo:', { reservaId, caballoId, extra });
 
     if (!instructoraId) {
       const usuario = obtenerUsuarioActual();
@@ -170,16 +193,21 @@ export const asignarCaballo = async (reservaId, caballoId, instructoraId = null)
       instructoraId = instructoraData.id || instructoraData.instructora_id;
     }
 
+    // Construir payload: caballo + (opcional) actividad y observaciones de la sesión.
+    const payload = {
+      caballo_id: caballoId,
+      instructora_id: instructoraId,
+    };
+    if (extra.actividad !== undefined) payload.actividad = extra.actividad;
+    if (extra.observaciones !== undefined) payload.observaciones = extra.observaciones;
+
     // Ahora hacer la asignación con el instructor_id correcto usando el endpoint existente
     const response = await fetch(`${API_BASE_URL}/reservas/instructor/${reservaId}/assign-horse`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ 
-        caballo_id: caballoId,
-        instructora_id: instructoraId
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -201,6 +229,22 @@ export const asignarCaballo = async (reservaId, caballoId, instructoraId = null)
     console.error('❌ Error al asignar caballo:', error);
     throw error;
   }
+};
+
+/**
+ * Actualiza sólo la actividad y observaciones de una reserva (sin tocar el caballo).
+ */
+export const actualizarSesion = async (reservaId, instructoraId, { actividad, observaciones }) => {
+  const response = await fetch(`${API_BASE_URL}/reservas/instructor/${reservaId}/session`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instructora_id: instructoraId, actividad, observaciones }),
+  });
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || 'Error al actualizar la sesión');
+  }
+  return response.json();
 };
 
 /**
@@ -410,19 +454,8 @@ export const obtenerCaballosPorNivel = async (nivelCliente, fecha = null) => {
       fecha = hoy.toISOString().split('T')[0];
     }
 
-    const response = await fetch(`${API_BASE_URL}/caballos`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    const caballos = await getCaballosList();
 
-    if (!response.ok) {
-      throw new Error(`Error HTTP: ${response.status}`);
-    }
-
-    const caballos = await response.json();
-    
     // Normalizar el nivel del cliente a formato estándar
     const nivelNormalizado = nivelCliente.toLowerCase();
     
@@ -498,15 +531,15 @@ export const obtenerCaballosPorNivel = async (nivelCliente, fecha = null) => {
 };
 
 /**
- * Obtiene el usuario actual del localStorage
+ * Obtiene el usuario actual del sessionStorage
  * @returns {Object|null}
  */
 export const obtenerUsuarioActual = () => {
   try {
-    const usuario = localStorage.getItem('user');
+    const usuario = sessionStorage.getItem('user');
     return usuario ? JSON.parse(usuario) : null;
   } catch (error) {
-    console.error('Error al obtener usuario del localStorage:', error);
+    console.error('Error al obtener usuario del sessionStorage:', error);
     return null;
   }
 };

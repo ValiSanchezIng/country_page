@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { obtenerClasesInstructora, actualizarAsistencia, obtenerUsuarioActual, obtenerCaballosPorNivel, obtenerCaballosDisponiblesParaHorario, asignarCaballo, invalidarCacheDisponibles } from "./instructor-api"
+import { obtenerClasesInstructora, actualizarAsistencia, obtenerUsuarioActual, obtenerCaballosPorNivel, obtenerCaballosDisponiblesParaHorario, asignarCaballo, invalidarCacheDisponibles, actualizarSesion } from "./instructor-api"
 import Toast from "./Toast"
 
 export default function InstructorDashboard() {
@@ -33,10 +33,10 @@ export default function InstructorDashboard() {
         setLoading(true)
         setError(null)
         
-        // Obtener el usuario del localStorage
+        // Obtener el usuario del sessionStorage
         const usuario = obtenerUsuarioActual()
         
-        console.log('🔍 Usuario del localStorage:', usuario)
+        console.log('🔍 Usuario del sessionStorage:', usuario)
         
         if (!usuario || !usuario.id) {
           throw new Error('No se encontró información de usuario')
@@ -402,6 +402,22 @@ export default function InstructorDashboard() {
     return caballosEnHorario;
   }, [classes]);
 
+  // Guardar actividad/observaciones de la sesión (sólo instructor admin u owner)
+  const handleSessionSave = useCallback(async (classId, { actividad, observaciones }) => {
+    try {
+      // Actualización optimista
+      setClasses(prev => prev.map(c => c.id === classId ? { ...c, actividad, observaciones } : c));
+      await actualizarSesion(classId, instructoraInfo?.id, { actividad, observaciones });
+      setToast({ message: 'Sesión actualizada', type: 'success' });
+    } catch (error) {
+      console.error('Error al guardar sesión:', error);
+      setToast({ message: error.message || 'Error al guardar la sesión', type: 'error' });
+    }
+  }, [instructoraInfo]);
+
+  // ¿Es instructor administrador? (puede ver todas las reservas y editar caballo/actividad)
+  const esInstructorAdmin = instructoraInfo?.tipo_instructor === 'admin';
+
   // Función para recargar las clases
   const recargarClases = useCallback(async () => {
     try {
@@ -437,9 +453,11 @@ export default function InstructorDashboard() {
     handleHorseChange, // Nueva función exportada
     getHorsesHashForHorario, // Hash de caballos en el mismo horario
     toast, setToast, // Toast para advertencias
-    loading, 
-    error, 
+    loading,
+    error,
     instructoraInfo,
+    esInstructorAdmin, // true si la instructora es de tipo admin
+    handleSessionSave, // Guardar actividad/observaciones
     recargarClases, // Función para recargar clases
   }
 }

@@ -28,47 +28,39 @@ router.get('/clase/:nombreClase', async (req, res) => {
       [nombreClase.toLowerCase()]
     );
     
-    // Si es iniciación o ponyclub, calcular capacidad ajustada según descansos fijos
-    let capacidadAjustadaPorDia = {};
-    if (['iniciacion', 'ponyclub'].includes(nombreClase.toLowerCase()) && rows.length > 0) {
+    // El cupo depende SÓLO de los espacios configurados (hc.capacidad), no del
+    // número de instructoras disponibles. La asignación de instructora se hace
+    // aparte al reservar y ya no recorta el cupo del slot.
+
+    // ===================== FILTRO POR HORARIO DE INSTRUCTORES =====================
+    // Solo se muestran los horarios en los que HAY un instructor (que imparte esta
+    // clase y está disponible) trabajando en ese día/hora. Ej.: si Tammara da
+    // ponyclub de 16:00 a 19:00, los slots de la mañana no aparecen.
+    let filteredRows = rows;
+    if (rows.length > 0) {
       const claseId = rows[0].clase_id;
-      
-      // Obtener todas las instructoras que pueden dar iniciación
-      const [instructorasAptas] = await db.execute(`
-        SELECT i.id
-        FROM instructoras i
-        INNER JOIN instructora_clase ic ON i.id = ic.instructora_id 
-          AND ic.clase_id = ? 
-          AND ic.activo = 1
-        WHERE i.disponibilidad = 'disponible'
+      const [bloquesTrabajo] = await db.execute(`
+        SELECT ih.dia_semana, ih.hora_inicio, ih.hora_fin
+        FROM instructora_horarios ih
+        INNER JOIN instructora_clase ic
+          ON ic.instructora_id = ih.instructora_id AND ic.clase_id = ? AND ic.activo = 1
+        INNER JOIN instructoras i
+          ON i.id = ih.instructora_id
+        WHERE ih.activo = 1 AND i.disponibilidad = 'disponible'
       `, [claseId]);
-      
-      const totalInstructoras = instructorasAptas.length;
-      
-      // Para cada día de la semana, contar cuántas instructoras descansan
-      const diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-      for (const dia of diasSemana) {
-        const [descansosDia] = await db.execute(`
-          SELECT COUNT(DISTINCT d.instructora_id) as en_descanso
-          FROM descansos d
-          WHERE d.es_recurrente = 1
-            AND d.dia_semana = ?
-            AND d.instructora_id IN (
-              SELECT i.id
-              FROM instructoras i
-              INNER JOIN instructora_clase ic ON i.id = ic.instructora_id 
-                AND ic.clase_id = ? 
-                AND ic.activo = 1
-              WHERE i.disponibilidad = 'disponible'
-            )
-        `, [dia, claseId]);
-        
-        const enDescanso = descansosDia[0]?.en_descanso || 0;
-        const disponibles = totalInstructoras - enDescanso;
-        capacidadAjustadaPorDia[dia] = Math.max(0, disponibles);
+
+      // Solo filtramos si existe configuración de horarios laborales para la clase;
+      // si no hay datos (config incompleta), no ocultamos todo (red de seguridad).
+      if (bloquesTrabajo.length > 0) {
+        const cubierto = (slot) => bloquesTrabajo.some(b =>
+          b.dia_semana === slot.dia_semana &&
+          String(b.hora_inicio) <= String(slot.hora_inicio) &&
+          String(b.hora_fin) >= String(slot.hora_fin)
+        );
+        filteredRows = rows.filter(cubierto);
       }
     }
-    
+
     // Mapear día de semana a nombre completo
     const dayMap = {
       'L': 'Lunes',
@@ -80,21 +72,16 @@ router.get('/clase/:nombreClase', async (req, res) => {
       'D': 'Domingo'
     };
     
-    // Agrupar horarios por día y formatear
-    const horariosPorDia = rows.reduce((acc, row) => {
+    // Agrupar horarios por día y formatear (solo los slots cubiertos por instructores)
+    const horariosPorDia = filteredRows.reduce((acc, row) => {
       const dia = dayMap[row.dia_semana];
       if (!acc[dia]) {
         acc[dia] = [];
       }
       
-      // Para iniciación/ponyclub: usar cupo_max de la clase (no recortar por # instructoras).
-      // Único guard: si ese día no queda NINGUNA instructora disponible, capacidad = 0.
-      let capacidad = row.capacidad;
-      if (['iniciacion', 'ponyclub'].includes(nombreClase.toLowerCase())) {
-        const dispDia = capacidadAjustadaPorDia[row.dia_semana];
-        capacidad = (dispDia === 0) ? 0 : row.cupo_max;
-      }
-      
+      // El cupo del slot es el configurado en horarios_clase.capacidad.
+      const capacidad = row.capacidad;
+
       acc[dia].push({
         id: row.id,
         hora_inicio: row.hora_inicio.substring(0, 5), // HH:MM
@@ -483,6 +470,43 @@ router.get('/clases', async (req, res) => {
   }
 });
 
+// PATCH /api/horarios/clases/:id/capacidad - Cambiar el cupo BASE de una clase.
+// Actualiza clases.cupo_max y todos sus horarios_clase.capacidad de una vez.
+// Body: { capacidad: number }  ó  { delta: number } (ajuste relativo)
+router.patch('/clases/:id/capacidad', async (req, res) => {
+  const { id } = req.params;
+  let { capacidad, delta } = req.body;
+
+  try {
+    const [claseRows] = await db.query('SELECT cupo_max FROM clases WHERE id = ?', [id]);
+    if (claseRows.length === 0) {
+      return res.status(404).json({ error: 'Clase no encontrada' });
+    }
+
+    // Calcular el nuevo cupo (absoluto o por delta), nunca menor que 0.
+    let nuevoCupo;
+    if (capacidad !== undefined && capacidad !== null && capacidad !== '') {
+      nuevoCupo = Number(capacidad);
+    } else if (delta !== undefined && delta !== null && delta !== '') {
+      nuevoCupo = Number(claseRows[0].cupo_max || 0) + Number(delta);
+    } else {
+      return res.status(400).json({ error: 'Indica capacidad o delta' });
+    }
+    if (Number.isNaN(nuevoCupo)) {
+      return res.status(400).json({ error: 'Valor de capacidad inválido' });
+    }
+    nuevoCupo = Math.max(0, Math.round(nuevoCupo));
+
+    await db.query('UPDATE clases SET cupo_max = ? WHERE id = ?', [nuevoCupo, id]);
+    await db.query('UPDATE horarios_clase SET capacidad = ? WHERE clase_id = ?', [nuevoCupo, id]);
+
+    res.json({ message: 'Cupo actualizado', clase_id: Number(id), capacidad: nuevoCupo });
+  } catch (err) {
+    console.error('Error actualizando cupo de clase:', err);
+    res.status(500).json({ error: 'Error al actualizar el cupo de la clase' });
+  }
+});
+
 // GET /api/horarios/personalizados - Obtener todos los horarios personalizados (Admin)
 router.get('/personalizados-all', async (req, res) => {
   try {
@@ -596,6 +620,86 @@ router.get('/personalizados/:userId', async (req, res) => {
   } catch (err) {
     console.error('Error obteniendo horarios personalizados:', err);
     res.status(500).json({ error: "Error obteniendo horarios personalizados" });
+  }
+});
+
+// =============================================================================
+// AJUSTES DE ESPACIOS (capacidad_overrides) — fijo / semanal / por día
+// =============================================================================
+
+// GET /api/horarios/overrides - listar ajustes activos con nombre de clase
+router.get('/overrides', async (req, res) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT co.*, c.nombre AS clase_nombre
+      FROM capacidad_overrides co
+      LEFT JOIN clases c ON c.id = co.clase_id
+      WHERE co.activo = 1
+      ORDER BY co.creado_en DESC
+    `);
+    res.json(rows);
+  } catch (err) {
+    console.error('Error obteniendo overrides de capacidad:', err);
+    res.status(500).json({ error: 'Error obteniendo ajustes de espacios' });
+  }
+});
+
+// POST /api/horarios/overrides - crear un ajuste de espacios
+// Body: { clase_id, tipo: 'fijo'|'semanal'|'dia', dia_semana?, fecha?, hora_inicio?,
+//         delta?, capacidad_abs?, creado_por? }
+router.post('/overrides', async (req, res) => {
+  const { clase_id, tipo, dia_semana, fecha, hora_inicio, delta, capacidad_abs, creado_por } = req.body;
+
+  if (!clase_id || !tipo) {
+    return res.status(400).json({ error: 'Faltan campos requeridos: clase_id, tipo' });
+  }
+  if (!['fijo', 'semanal', 'dia'].includes(tipo)) {
+    return res.status(400).json({ error: "tipo inválido (fijo | semanal | dia)" });
+  }
+  if (tipo === 'semanal' && !dia_semana) {
+    return res.status(400).json({ error: 'tipo semanal requiere dia_semana' });
+  }
+  if (tipo === 'dia' && !fecha) {
+    return res.status(400).json({ error: 'tipo dia requiere fecha' });
+  }
+  if ((delta === undefined || delta === null || delta === '') && (capacidad_abs === undefined || capacidad_abs === null || capacidad_abs === '')) {
+    return res.status(400).json({ error: 'Indica un delta (ej. +1 / -1) o un cupo absoluto' });
+  }
+
+  try {
+    const [result] = await db.query(`
+      INSERT INTO capacidad_overrides
+        (clase_id, tipo, dia_semana, fecha, hora_inicio, delta, capacidad_abs, creado_por)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [
+      clase_id, tipo,
+      tipo === 'semanal' ? dia_semana : null,
+      tipo === 'dia' ? fecha : null,
+      hora_inicio || null,
+      delta === '' || delta === undefined || delta === null ? 0 : Number(delta),
+      capacidad_abs === '' || capacidad_abs === undefined || capacidad_abs === null ? null : Number(capacidad_abs),
+      creado_por || null
+    ]);
+    res.json({ message: 'Ajuste de espacios creado', id: result.insertId });
+  } catch (err) {
+    console.error('Error creando override de capacidad:', err);
+    res.status(500).json({ error: 'Error al crear el ajuste de espacios' });
+  }
+});
+
+// DELETE /api/horarios/overrides/:id - desactivar (soft-delete) un ajuste
+router.delete('/overrides/:id', async (req, res) => {
+  try {
+    const [result] = await db.query(
+      `UPDATE capacidad_overrides SET activo = 0 WHERE id = ?`, [req.params.id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Ajuste no encontrado' });
+    }
+    res.json({ message: 'Ajuste eliminado' });
+  } catch (err) {
+    console.error('Error eliminando override de capacidad:', err);
+    res.status(500).json({ error: 'Error al eliminar el ajuste de espacios' });
   }
 });
 

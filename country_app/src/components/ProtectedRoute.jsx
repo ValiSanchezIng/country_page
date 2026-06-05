@@ -8,7 +8,7 @@ const ProtectedRoute = ({ children }) => {
 
   useEffect(() => {
     const checkAuth = () => {
-      const user = localStorage.getItem('user');
+      const user = sessionStorage.getItem('user');
       console.log('Verificando autenticación:', { user: !!user, path: location.pathname });
       
       if (user) {
@@ -19,25 +19,25 @@ const ProtectedRoute = ({ children }) => {
             console.log('Usuario autenticado:', parsedUser.nombre);
             setIsAuthenticated(true);
           } else {
-            console.log('Datos de usuario inválidos, limpiando localStorage');
-            // Si los datos están corruptos, limpiar localStorage
-            localStorage.removeItem('user');
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('instructorData');
-            localStorage.removeItem('userData');
+            console.log('Datos de usuario inválidos, limpiando sessionStorage');
+            // Si los datos están corruptos, limpiar sessionStorage
+            sessionStorage.removeItem('user');
+            sessionStorage.removeItem('authToken');
+            sessionStorage.removeItem('instructorData');
+            sessionStorage.removeItem('userData');
             setIsAuthenticated(false);
           }
         } catch (error) {
-          console.log('Error al parsear usuario, limpiando localStorage:', error);
-          // Si hay error al parsear, limpiar localStorage
-          localStorage.removeItem('user');
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('instructorData');
-          localStorage.removeItem('userData');
+          console.log('Error al parsear usuario, limpiando sessionStorage:', error);
+          // Si hay error al parsear, limpiar sessionStorage
+          sessionStorage.removeItem('user');
+          sessionStorage.removeItem('authToken');
+          sessionStorage.removeItem('instructorData');
+          sessionStorage.removeItem('userData');
           setIsAuthenticated(false);
         }
       } else {
-        console.log('No hay usuario en localStorage');
+        console.log('No hay usuario en sessionStorage');
         setIsAuthenticated(false);
       }
       setIsLoading(false);
@@ -46,10 +46,10 @@ const ProtectedRoute = ({ children }) => {
     // Verificar inmediatamente
     checkAuth();
 
-    // Escuchar cambios en localStorage (cuando se hace logout desde otra pestaña)
+    // Escuchar cambios en sessionStorage (cuando se hace logout desde otra pestaña)
     const handleStorageChange = (e) => {
       if (e.key === 'user' || e.key === null) {
-        console.log('Cambio en localStorage detectado');
+        console.log('Cambio en sessionStorage detectado');
         checkAuth();
       }
     };
@@ -70,7 +70,7 @@ const ProtectedRoute = ({ children }) => {
 
     // Solución para navegadores: recargar si la página se muestra desde el historial y no hay sesión
     const handlePageShow = (event) => {
-      const user = localStorage.getItem('user');
+      const user = sessionStorage.getItem('user');
       if (!user && event.persisted) {
         // Si no hay sesión y la página viene del historial, recargar
         window.location.reload();
@@ -113,7 +113,7 @@ const ProtectedRoute = ({ children }) => {
   if (!isAuthenticated) {
     console.log('Usuario no autenticado, redirigiendo a login');
     // Forzar limpieza completa antes de redirigir
-    localStorage.clear();
+    sessionStorage.clear();
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 

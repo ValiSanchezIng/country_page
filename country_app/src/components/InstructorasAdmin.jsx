@@ -18,7 +18,8 @@ const InstructorasAdmin = () => {
     apellido: "",
     correo: "",
     telefono: "",
-    especialidad: ""
+    especialidad: "",
+    tipo_instructor: "general"
   });
   const [searchTerm, setSearchTerm] = useState("");
   const [availabilityFilter, setAvailabilityFilter] = useState("disponible");
@@ -665,7 +666,8 @@ const InstructorasAdmin = () => {
       apellido: "",
       correo: "",
       telefono: "",
-      especialidad: ""
+      especialidad: "",
+      tipo_instructor: "general"
     });
     setAddInstructorModalOpen(true);
   };
@@ -678,7 +680,8 @@ const InstructorasAdmin = () => {
       apellido: "",
       correo: "",
       telefono: "",
-      especialidad: ""
+      especialidad: "",
+      tipo_instructor: "general"
     });
   };
 
@@ -689,7 +692,8 @@ const InstructorasAdmin = () => {
       apellido: instructor.apellido,
       correo: instructor.correo || "",
       num_contacto: instructor.num_contacto || "",
-      especialidad: instructor.especialidad
+      especialidad: instructor.especialidad,
+      tipo_instructor: instructor.tipo_instructor || "general"
     });
     setEditInstructorModalOpen(true);
   };
@@ -1732,6 +1736,16 @@ const InstructorasAdmin = () => {
                     })}
                   </div>
                 </div>
+                <div className="modal-field">
+                  <label>Tipo de instructor:</label>
+                  <select
+                    value={editingInstructor.tipo_instructor || "general"}
+                    onChange={e => setEditingInstructor({ ...editingInstructor, tipo_instructor: e.target.value })}
+                  >
+                    <option value="general">General (sólo ve sus clases y marca asistencia)</option>
+                    <option value="admin">Admin (ve todas las reservas y edita caballo/actividad)</option>
+                  </select>
+                </div>
               </div>
               <div className="modal-actions">
                 <button className="btn btn-primary" onClick={updateInstructor} type="button" disabled={updatingInstructor}>
@@ -1855,6 +1869,17 @@ const InstructorasAdmin = () => {
                         );
                       })}
                     </div>
+                  </div>
+
+                  <div className="modal-field">
+                    <label>Tipo de instructor:</label>
+                    <select
+                      value={newInstructor.tipo_instructor || "general"}
+                      onChange={e => setNewInstructor({ ...newInstructor, tipo_instructor: e.target.value })}
+                    >
+                      <option value="general">General (sólo ve sus clases y marca asistencia)</option>
+                      <option value="admin">Admin (ve todas las reservas y edita caballo/actividad)</option>
+                    </select>
                   </div>
 
                   <div className="modal-actions">

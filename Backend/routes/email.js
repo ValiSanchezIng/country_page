@@ -626,4 +626,76 @@ router.post("/send-cancellation-notification", async (req, res) => {
   }
 });
 
+// Endpoint para recordatorio de reserva (2 horas antes de la clase)
+router.post("/send-reminder", async (req, res) => {
+  try {
+    const { email, nombre, fechaReserva, horaInicio, horaFin, instructor } = req.body;
+    console.log("Enviando recordatorio de reserva por email a:", email);
+
+    if (!email || !nombre || !fechaReserva || !horaInicio || !horaFin) {
+      return res
+        .status(400)
+        .json({ error: "Campos requeridos: email, nombre, fechaReserva, horaInicio, horaFin" });
+    }
+
+    const fechaFormateada = formatearFecha(fechaReserva);
+
+    const htmlContent = emailWrapper(
+      `Hola ${nombre}, te recordamos tu clase de hoy a las ${horaInicio}.`,
+      `
+      ${emailHeader()}
+
+      <tr>
+        <td class="email-padding" style="padding:24px 28px 20px;">
+          <div style="text-align:center; margin-bottom:16px;">
+            <span style="display:inline-block; background-color:#fef9ef; color:#8b6f4e; font-size:12px; font-weight:700; padding:6px 18px; border-radius:20px; border:1px solid #f5e6c4;">
+              <img src="${icons.clock}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:4px;">Recordatorio de Clase
+            </span>
+          </div>
+
+          <p style="margin:0 0 20px 0; color:#666; font-size:14px; text-align:center; line-height:1.5;">
+            Hola <strong style="color:#8b6f4e;">${nombre}</strong>, tu clase comienza en aproximadamente <strong>2 horas</strong>. Por favor confirma tu asistencia.
+          </p>
+
+          <table width="100%" cellspacing="0" cellpadding="0" class="detail-bg" style="background-color:#faf8f5; border:1px solid #e8e0d6; border-radius:10px; margin-bottom:16px;" role="presentation">
+            <tr>
+              <td class="cred-inner" style="padding:16px 18px;">
+                ${detailRow('Fecha', fechaFormateada)}
+                ${detailRow('Horario', `${horaInicio} - ${horaFin}`, { borderBottom: !!instructor })}
+                ${instructor ? detailRow('Instructor(a)', instructor, { borderBottom: false }) : ''}
+              </td>
+            </tr>
+          </table>
+
+          <table width="100%" cellspacing="0" cellpadding="0" role="presentation">
+            <tr>
+              <td class="note-warn" style="background-color:#fef9ef; border:1px solid #f5e6c4; border-radius:8px; padding:10px 14px;">
+                <p style="margin:0; color:#8b6f4e; font-size:11px; line-height:1.5;">
+                  <img src="${icons.alertTriangle}" alt="" width="14" height="14" style="display:inline-block; vertical-align:middle; margin-right:4px;"><strong>Importante:</strong> Si no puedes asistir, cancela desde la plataforma para liberar tu espacio.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+      ${emailFooter()}
+      `
+    );
+
+    const response = await resend.emails.send({
+      from: "EL REFUGIO <noreply@elrefugiocountryclub.com>",
+      to: email,
+      subject: "Recordatorio de tu clase - EL REFUGIO",
+      html: htmlContent,
+    });
+
+    console.log("Email de recordatorio enviado exitosamente:", response);
+    res.json({ success: true, data: response });
+  } catch (error) {
+    console.error("Error al enviar email de recordatorio:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

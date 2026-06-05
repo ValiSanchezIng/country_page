@@ -143,6 +143,8 @@ router.get('/users-with-payments', async (req, res) => {
         u.rol,
         u.estatus,
         u.tipo_nivel,
+        u.tipo_cliente,
+        u.permite_reserva_semanal,
         u.fecha_registro,
         COALESCE(c.monto, 0) AS monto,
         c.fecha_pago,
@@ -672,6 +674,34 @@ router.patch('/update-nivel/:id', async (req, res) => {
     }
 
     res.status(500).json({ error: 'Error al actualizar nivel del usuario' });
+  }
+});
+
+// Habilitar/deshabilitar la reserva semanal (sólo aplica a clientes avanzados).
+router.patch('/update-reserva-semanal/:id', async (req, res) => {
+  const { id } = req.params;
+  const { permite_reserva_semanal } = req.body;
+
+  if (permite_reserva_semanal === undefined || permite_reserva_semanal === null) {
+    return res.status(400).json({ error: 'El campo permite_reserva_semanal es requerido' });
+  }
+
+  const valor = (permite_reserva_semanal === true || permite_reserva_semanal === 1 || permite_reserva_semanal === '1') ? 1 : 0;
+
+  try {
+    const [result] = await db.query(
+      "UPDATE usuarios SET permite_reserva_semanal=? WHERE id=?",
+      [valor, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json({ message: 'Permiso de reserva semanal actualizado', permite_reserva_semanal: valor });
+  } catch (err) {
+    console.error('Error al actualizar reserva semanal:', err);
+    res.status(500).json({ error: 'Error al actualizar el permiso de reserva semanal' });
   }
 });
 

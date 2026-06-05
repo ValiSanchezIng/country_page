@@ -16,7 +16,10 @@ const CaballosAdmin = () => {
     disponibilidad: "disponible",
     estatus: "publico",
     especialidad: [],
-    descripcion: ""
+    descripcion: "",
+    renta_cliente_id: "",
+    renta_fecha_inicio: "",
+    renta_fecha_fin: ""
   });
   const [editingHorse, setEditingHorse] = useState(null);
   const [creatingHorse, setCreatingHorse] = useState(false);
@@ -118,7 +121,10 @@ const CaballosAdmin = () => {
       disponibilidad: "disponible",
       estatus: "publico",
       especialidad: [],
-      descripcion: ""
+      descripcion: "",
+      renta_cliente_id: "",
+      renta_fecha_inicio: "",
+      renta_fecha_fin: ""
     });
     setAddHorseModalOpen(true);
   };
@@ -131,16 +137,23 @@ const CaballosAdmin = () => {
       disponibilidad: "disponible",
       estatus: "publico",
       especialidad: [],
-      descripcion: ""
+      descripcion: "",
+      renta_cliente_id: "",
+      renta_fecha_inicio: "",
+      renta_fecha_fin: ""
     });
   };
 
   const openEditHorseModal = (caballo) => {
+    const toDateInput = (v) => (v ? String(v).split('T')[0] : "");
     setEditingHorse({
       ...caballo,
       propietario_id: caballo.propietario_id || "",
       especialidad: parseEspecialidades(caballo.especialidad),
-      descripcion: caballo.descripcion ?? ""
+      descripcion: caballo.descripcion ?? "",
+      renta_cliente_id: caballo.renta_cliente_id || "",
+      renta_fecha_inicio: toDateInput(caballo.renta_fecha_inicio),
+      renta_fecha_fin: toDateInput(caballo.renta_fecha_fin)
     });
     setEditHorseModalOpen(true);
   };
@@ -169,7 +182,10 @@ const CaballosAdmin = () => {
         disponibilidad: editingHorse.disponibilidad,
         estatus: editingHorse.estatus,
         especialidad: editingHorse.especialidad, // Enviar como array
-        descripcion: (editingHorse.descripcion ?? '').trim()
+        descripcion: (editingHorse.descripcion ?? '').trim(),
+        renta_cliente_id: editingHorse.renta_cliente_id ? parseInt(editingHorse.renta_cliente_id) : null,
+        renta_fecha_inicio: editingHorse.renta_fecha_inicio || null,
+        renta_fecha_fin: editingHorse.renta_fecha_fin || null
       };
 
       const response = await fetch(`https://elrefugiocountryclub.com/api/api/caballos/${editingHorse.id}`, {
@@ -249,7 +265,10 @@ const CaballosAdmin = () => {
         disponibilidad: newHorse.disponibilidad,
         estatus: newHorse.estatus,
         especialidad: newHorse.especialidad, // Enviar como array
-        descripcion: (newHorse.descripcion ?? '').trim()
+        descripcion: (newHorse.descripcion ?? '').trim(),
+        renta_cliente_id: newHorse.renta_cliente_id ? parseInt(newHorse.renta_cliente_id) : null,
+        renta_fecha_inicio: newHorse.renta_fecha_inicio || null,
+        renta_fecha_fin: newHorse.renta_fecha_fin || null
       };
 
       console.log('🐎 Enviando datos del caballo:', horseData);
@@ -920,6 +939,35 @@ const CaballosAdmin = () => {
                     <option value="media_renta">Media Renta</option>
                   </select>
                 </div>
+                {(editingHorse.estatus === "renta" || editingHorse.estatus === "media_renta") && (
+                  <div className="modal-field" style={{ border: "1px solid #e8e0d6", borderRadius: 8, padding: "0.75rem", background: "#faf8f5" }}>
+                    <label style={{ fontWeight: 600 }}>Datos de renta</label>
+                    <div style={{ marginTop: "0.5rem" }}>
+                      <label>Rentado a:</label>
+                      <select
+                        value={editingHorse.renta_cliente_id || ""}
+                        onChange={e => setEditingHorse({ ...editingHorse, renta_cliente_id: e.target.value })}
+                      >
+                        <option value="">Sin asignar</option>
+                        {propietarios.map(prop => (
+                          <option key={prop.id} value={prop.id}>{prop.nombre} {prop.apellido} - ID: {prop.id}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "0.5rem" }}>
+                      <div>
+                        <label>Inicio:</label>
+                        <input type="date" value={editingHorse.renta_fecha_inicio || ""}
+                          onChange={e => setEditingHorse({ ...editingHorse, renta_fecha_inicio: e.target.value })} />
+                      </div>
+                      <div>
+                        <label>Fin:</label>
+                        <input type="date" value={editingHorse.renta_fecha_fin || ""}
+                          onChange={e => setEditingHorse({ ...editingHorse, renta_fecha_fin: e.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="modal-field">
                   <label>Especialidades:</label>
                   <div className="especialidades-checkbox-container" style={{ 
@@ -1041,6 +1089,35 @@ const CaballosAdmin = () => {
                     <option value="media_renta">Media Renta</option>
                   </select>
                 </div>
+                {(newHorse.estatus === "renta" || newHorse.estatus === "media_renta") && (
+                  <div className="modal-field" style={{ border: "1px solid #e8e0d6", borderRadius: 8, padding: "0.75rem", background: "#faf8f5" }}>
+                    <label style={{ fontWeight: 600 }}>Datos de renta</label>
+                    <div style={{ marginTop: "0.5rem" }}>
+                      <label>Rentado a:</label>
+                      <select
+                        value={newHorse.renta_cliente_id || ""}
+                        onChange={e => setNewHorse({ ...newHorse, renta_cliente_id: e.target.value })}
+                      >
+                        <option value="">Sin asignar</option>
+                        {propietarios.map(prop => (
+                          <option key={prop.id} value={prop.id}>{prop.nombre} {prop.apellido} - ID: {prop.id}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "0.5rem" }}>
+                      <div>
+                        <label>Inicio:</label>
+                        <input type="date" value={newHorse.renta_fecha_inicio || ""}
+                          onChange={e => setNewHorse({ ...newHorse, renta_fecha_inicio: e.target.value })} />
+                      </div>
+                      <div>
+                        <label>Fin:</label>
+                        <input type="date" value={newHorse.renta_fecha_fin || ""}
+                          onChange={e => setNewHorse({ ...newHorse, renta_fecha_fin: e.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div className="modal-field">
                   <label>Especialidades:</label>
                   <div className="especialidades-checkbox-container" style={{ 

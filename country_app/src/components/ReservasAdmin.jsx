@@ -17,7 +17,16 @@ const ReservasAdmin = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
   const [estadoFilter, setEstadoFilter] = useState("");
+  const [claseFilter, setClaseFilter] = useState("");
+  const [instructorFilter, setInstructorFilter] = useState("");
+  const [caballoFilter, setCaballoFilter] = useState("");
+  // Listas completas para los filtros (no dependen de las reservas del periodo)
+  const [instructoresList, setInstructoresList] = useState([]);
+  const [caballosList, setCaballosList] = useState([]);
   const itemsPerPage = 10;
+
+  // Catálogo fijo de clases (coincide con clases.nombre en la BD)
+  const CLASES_CATALOGO = ["iniciacion", "ponyclub", "paseo", "intermedio", "avanzado"];
 
   // Mostrar notificación
   const showNotification = (message, type = "success") => {
@@ -25,6 +34,32 @@ const ReservasAdmin = () => {
     setTimeout(() => {
       setNotification({ show: false, message: "", type: "" });
     }, 4000);
+  };
+
+  // Cambiar el estatus de una reserva (incluye cancelar) desde el admin
+  const cambiarEstatus = async (id, nuevoEstatus) => {
+    const previas = reservas;
+    // Actualización optimista
+    setReservas(prev => prev.map(r => r.id === id ? { ...r, estatus: nuevoEstatus } : r));
+    try {
+      const response = await fetch(`https://elrefugiocountryclub.com/api/api/reservas-admin/${id}/estatus`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estatus: nuevoEstatus }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || "Error al actualizar estatus");
+      }
+      showNotification(
+        nuevoEstatus === "cancelada" ? "Clase cancelada correctamente" : "Estatus actualizado",
+        "success"
+      );
+    } catch (error) {
+      console.error("Error al cambiar estatus:", error);
+      setReservas(previas); // revertir
+      showNotification(error.message || "Error al actualizar estatus", "error");
+    }
   };
 
   // Cargar reservas desde el backend
@@ -81,6 +116,18 @@ const ReservasAdmin = () => {
     setCurrentPage(1);
   }, [filtroTiempo, fechaSeleccionada, mesSeleccionado, fechaInicio, fechaFin]);
 
+  // Cargar catálogos completos de instructores y caballos para los filtros (una vez)
+  useEffect(() => {
+    fetch("https://elrefugiocountryclub.com/api/api/instructoras")
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setInstructoresList(Array.isArray(data) ? data : []))
+      .catch(() => setInstructoresList([]));
+    fetch("https://elrefugiocountryclub.com/api/api/caballos")
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setCaballosList(Array.isArray(data) ? data : []))
+      .catch(() => setCaballosList([]));
+  }, []);
+
   // Auto-refresh silencioso cada 30s
   const refreshReservas = useCallback(() => loadReservas(true), [filtroTiempo, fechaSeleccionada, mesSeleccionado, fechaInicio, fechaFin]);
   useAutoRefresh(refreshReservas, { interval: 30000 });
@@ -111,6 +158,7 @@ const ReservasAdmin = () => {
           stickyHeader.style.position = 'fixed'
           stickyHeader.style.top = '0'
           stickyHeader.style.zIndex = '999'
+          stickyHeader.style.pointerEvents = 'none' // nunca bloquear clics aunque quede colgado
           stickyHeader.classList.add('sticky-clone')
           stickyHeader.style.display = 'table'
 
@@ -186,16 +234,34 @@ const ReservasAdmin = () => {
     }
   }, [loading, reservas])
 
+  // Opciones de los filtros: listas COMPLETAS (todas las clases, instructores y caballos),
+  // no solo lo que aparece en las reservas del periodo.
+  const normalizarNombre = (n = "", a = "") => `${n} ${a}`.replace(/\s+/g, " ").trim();
+  const nombreInstructora = (r) => (r.instructora_nombre && r.instructora_apellido)
+    ? normalizarNombre(r.instructora_nombre, r.instructora_apellido) : "";
+  const clasesUnicas = CLASES_CATALOGO;
+  const instructoresUnicos = [...new Set(
+    instructoresList
+      .map(i => normalizarNombre(i.nombre, i.apellido))
+      .filter(Boolean)
+  )].sort();
+  const caballosUnicos = [...new Set(
+    caballosList.map(c => c.nombre).filter(Boolean)
+  )].sort();
+
   // Filtrar reservas
   const filteredReservas = reservas.filter(r => {
     const clienteNombre = r.cliente_nombre && r.cliente_apellido ? `${r.cliente_nombre} ${r.cliente_apellido}` : "";
-    const instructoraNombre = r.instructora_nombre && r.instructora_apellido ? `${r.instructora_nombre} ${r.instructora_apellido}` : "";
+    const instructoraNombre = nombreInstructora(r);
     const matchesSearch = searchTerm === "" ||
       clienteNombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       instructoraNombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (r.caballo_nombre && r.caballo_nombre.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesEstado = estadoFilter === "" || r.estatus === estadoFilter;
-    return matchesSearch && matchesEstado;
+    const matchesClase = claseFilter === "" || r.clase_nombre === claseFilter;
+    const matchesInstructor = instructorFilter === "" || instructoraNombre === instructorFilter;
+    const matchesCaballo = caballoFilter === "" || r.caballo_nombre === caballoFilter;
+    return matchesSearch && matchesEstado && matchesClase && matchesInstructor && matchesCaballo;
   });
 
   // Calcular paginación sobre filtrados
@@ -464,6 +530,33 @@ const ReservasAdmin = () => {
               <option value="cancelada">Cancelada</option>
             </select>
           </div>
+          <div className="controls-filter-item">
+            <label className={`controls-filter-label ${claseFilter ? "label-active" : ""}`}>Clase</label>
+            <select className={`controls-filter-select ${claseFilter ? "filter-active" : ""}`} value={claseFilter} onChange={(e) => { setClaseFilter(e.target.value); setCurrentPage(1); }}>
+              <option value="">Todas</option>
+              {clasesUnicas.map(c => (
+                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+              ))}
+            </select>
+          </div>
+          <div className="controls-filter-item">
+            <label className={`controls-filter-label ${instructorFilter ? "label-active" : ""}`}>Instructor</label>
+            <select className={`controls-filter-select ${instructorFilter ? "filter-active" : ""}`} value={instructorFilter} onChange={(e) => { setInstructorFilter(e.target.value); setCurrentPage(1); }}>
+              <option value="">Todos</option>
+              {instructoresUnicos.map(i => (
+                <option key={i} value={i}>{i}</option>
+              ))}
+            </select>
+          </div>
+          <div className="controls-filter-item">
+            <label className={`controls-filter-label ${caballoFilter ? "label-active" : ""}`}>Caballo</label>
+            <select className={`controls-filter-select ${caballoFilter ? "filter-active" : ""}`} value={caballoFilter} onChange={(e) => { setCaballoFilter(e.target.value); setCurrentPage(1); }}>
+              <option value="">Todos</option>
+              {caballosUnicos.map(cab => (
+                <option key={cab} value={cab}>{cab}</option>
+              ))}
+            </select>
+          </div>
         </div>
         {filtroTiempo === "semana" && (
           <div style={{ fontSize: "0.8rem", color: "var(--secondary-brown)", fontWeight: "500" }}>
@@ -520,7 +613,7 @@ const ReservasAdmin = () => {
               {currentReservas.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="empty-state-cell">
-                    {searchTerm || estadoFilter
+                    {searchTerm || estadoFilter || claseFilter || instructorFilter || caballoFilter
                       ? "No se encontraron reservas con los filtros aplicados."
                       : filtroTiempo === "dia"
                         ? `No hay reservas para el ${formatDate(fechaSeleccionada)}`
@@ -582,18 +675,26 @@ const ReservasAdmin = () => {
                         </span>
                       </td>
                       <td>
-                        <span
+                        <select
+                          value={reserva.estatus}
+                          onChange={(e) => cambiarEstatus(reserva.id, e.target.value)}
                           className="status-badge"
                           style={{
                             borderColor: estadoColor.border,
                             color: estadoColor.color,
-                            padding: "0.4rem 0.8rem",
-                            display: "inline-block",
-                            cursor: "default"
+                            padding: "0.4rem 0.6rem",
+                            borderRadius: "6px",
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            background: "white"
                           }}
+                          title="Cambiar estado de la reserva"
                         >
-                          {reserva.estatus.charAt(0).toUpperCase() + reserva.estatus.slice(1)}
-                        </span>
+                          <option value="pendiente">Pendiente</option>
+                          <option value="confirmada">Confirmada</option>
+                          <option value="completada">Completada</option>
+                          <option value="cancelada">Cancelada</option>
+                        </select>
                       </td>
                     </tr>
                   );

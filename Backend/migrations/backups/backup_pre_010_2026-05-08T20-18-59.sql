@@ -24,11 +24,11 @@ CREATE TABLE `clases` (
   KEY `idx_clases_nombre` (`nombre`)
 ) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb3;
 
-INSERT INTO `clases` (`id`, `nombre`, `duracion_min`, `cupo_max`, `prioridad`, `horario_matutino`, `horario_vespertino`, `observaciones`) VALUES (1, 'iniciacion', 30, 2, 1, NULL, NULL, 'Clase de iniciación para principiantes - 30 minutos');
-INSERT INTO `clases` (`id`, `nombre`, `duracion_min`, `cupo_max`, `prioridad`, `horario_matutino`, `horario_vespertino`, `observaciones`) VALUES (2, 'intermedio', 60, 6, 2, NULL, NULL, 'Clase nivel intermedio - 1 hora');
-INSERT INTO `clases` (`id`, `nombre`, `duracion_min`, `cupo_max`, `prioridad`, `horario_matutino`, `horario_vespertino`, `observaciones`) VALUES (3, 'paseo', 60, 6, 3, NULL, NULL, 'Paseo o caminata - 1 hora');
-INSERT INTO `clases` (`id`, `nombre`, `duracion_min`, `cupo_max`, `prioridad`, `horario_matutino`, `horario_vespertino`, `observaciones`) VALUES (4, 'avanzado', 60, 6, 4, NULL, NULL, 'Clase nivel avanzado/salto - 1 hora');
-INSERT INTO `clases` (`id`, `nombre`, `duracion_min`, `cupo_max`, `prioridad`, `horario_matutino`, `horario_vespertino`, `observaciones`) VALUES (5, 'ponyclub', 30, 2, 5, NULL, NULL, 'Clase Ponyclub para principiantes - 30 minutos (igual que iniciación)');
+INSERT INTO `clases` (`id`, `nombre`, `duracion_min`, `cupo_max`, `prioridad`, `horario_matutino`, `horario_vespertino`, `observaciones`) VALUES (1, 'iniciacion', 30, 2, 1, NULL, NULL, 'Clase de iniciación para principiantes');
+INSERT INTO `clases` (`id`, `nombre`, `duracion_min`, `cupo_max`, `prioridad`, `horario_matutino`, `horario_vespertino`, `observaciones`) VALUES (2, 'intermedio', 60, 6, 2, NULL, NULL, 'Clase nivel intermedio');
+INSERT INTO `clases` (`id`, `nombre`, `duracion_min`, `cupo_max`, `prioridad`, `horario_matutino`, `horario_vespertino`, `observaciones`) VALUES (3, 'paseo', 60, 6, 3, NULL, NULL, 'Paseo o caminata');
+INSERT INTO `clases` (`id`, `nombre`, `duracion_min`, `cupo_max`, `prioridad`, `horario_matutino`, `horario_vespertino`, `observaciones`) VALUES (4, 'avanzado', 60, 6, 4, NULL, NULL, 'Clase nivel avanzado/salto');
+INSERT INTO `clases` (`id`, `nombre`, `duracion_min`, `cupo_max`, `prioridad`, `horario_matutino`, `horario_vespertino`, `observaciones`) VALUES (5, 'ponyclub', 30, 2, 5, NULL, NULL, 'Clase Ponyclub para principiantes');
 
 -- 5 filas en clases
 

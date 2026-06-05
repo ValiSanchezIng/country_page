@@ -12,6 +12,9 @@ import HorariosPersonalizadosAdmin from "./administrador/HorariosPersonalizadosA
 import BloqueosAdmin from "./administrador/BloqueosAdmin";
 import DisponibilidadHorarios from "./administrador/DisponibilidadHorarios";
 import MetricasResumen from "./administrador/MetricasResumen";
+import MetricasCaballos from "./MetricasCaballos";
+import AjusteEspacios from "./administrador/AjusteEspacios";
+import ErrorBoundary from "./ErrorBoundary";
 
 const MembershipAdminDashboard = () => {
   useRoleGuard(['administrador', 'contabilidad']);
@@ -367,6 +370,7 @@ const MembershipAdminDashboard = () => {
             proximaFecha: proximaFecha,
             rol: u.rol || "",
             tipo_nivel: u.tipo_nivel || "",
+            permite_reserva_semanal: Number(u.permite_reserva_semanal) === 1,
           };
         })
         setMembers(mapped)
@@ -561,9 +565,9 @@ const MembershipAdminDashboard = () => {
     }
   }, [withoutEmail, newClient.nombre, newClient.apellido, previewEdited]);
 
-  // Obtener usuario actual del localStorage
+  // Obtener usuario actual del sessionStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
+    const storedUser = sessionStorage.getItem('user');
     if (storedUser) {
       try {
         setCurrentUser(JSON.parse(storedUser));
@@ -1106,6 +1110,7 @@ const MembershipAdminDashboard = () => {
               { key: 'horariosPersonalizados', label: 'Horarios Extras' },
               { key: 'bloqueos', label: 'Bloqueos' },
               { key: 'disponibilidad', label: 'Disponibilidad' },
+              { key: 'espacios', label: 'Espacios' },
               { key: 'metricas', label: 'Métricas' },
             ].map(tab => (
               <button
@@ -1319,6 +1324,33 @@ const MembershipAdminDashboard = () => {
                               <option value="intermedio">Intermedio</option>
                               <option value="avanzado">Avanzado</option>
                             </select>
+                            {member.tipo_nivel === "avanzado" && (
+                              <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, fontSize: "0.78rem", color: "#6b4423", cursor: "pointer" }}>
+                                <input
+                                  type="checkbox"
+                                  checked={!!member.permite_reserva_semanal}
+                                  onChange={async (e) => {
+                                    const valor = e.target.checked;
+                                    try {
+                                      const response = await fetch(`https://elrefugiocountryclub.com/api/api/users/update-reserva-semanal/${member.id}`, {
+                                        method: "PATCH",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ permite_reserva_semanal: valor ? 1 : 0 }),
+                                      });
+                                      if (response.ok) {
+                                        setMembers((prev) => prev.map((m) => (m.id === member.id ? { ...m, permite_reserva_semanal: valor } : m)));
+                                        showNotification("Permiso de reserva semanal actualizado", "success");
+                                      } else {
+                                        showNotification("Error al actualizar la reserva semanal", "error");
+                                      }
+                                    } catch {
+                                      showNotification("Error de conexión. Inténtalo de nuevo.", "error");
+                                    }
+                                  }}
+                                />
+                                Reserva semanal
+                              </label>
+                            )}
                           </td>
                           <td className="td-fee">${formatCurrency(member.monthlyFee)}</td>
                           <td>{formatDate(member.lastPaymentDate)}</td>
@@ -1406,7 +1438,9 @@ const MembershipAdminDashboard = () => {
       {/* CONTENIDO DE CABALLOS */}
       {activeTab === "caballos" && (
         <div className="tab-content">
-          <CaballosAdmin />
+          <ErrorBoundary>
+            <CaballosAdmin />
+          </ErrorBoundary>
         </div>
       )}
 
@@ -1443,9 +1477,18 @@ const MembershipAdminDashboard = () => {
         </div>
       )}
 
+      {activeTab === "espacios" && (
+        <div className="tab-content">
+          <AjusteEspacios />
+        </div>
+      )}
+
       {activeTab === "metricas" && (
         <div className="tab-content">
-          <MetricasResumen />
+          <ErrorBoundary>
+            <MetricasResumen />
+            <MetricasCaballos />
+          </ErrorBoundary>
         </div>
       )}
 

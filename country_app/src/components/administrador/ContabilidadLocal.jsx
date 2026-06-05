@@ -260,9 +260,9 @@ const MembershipAdminDashboardLocal = () => {
     }
   }, [withoutEmail, newClient.nombre, newClient.apellido]);
 
-  // Obtener usuario actual del localStorage
+  // Obtener usuario actual del sessionStorage
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
+    const storedUser = sessionStorage.getItem('user');
     if (storedUser) {
       try {
         setCurrentUser(JSON.parse(storedUser));

@@ -19,7 +19,7 @@ const LogoutButton = ({
     console.log('Cerrando sesión y limpiando datos...');
     
     // ✅ Limpiar datos de sesión completamente
-    localStorage.clear(); // Limpia todo el localStorage
+    sessionStorage.clear(); // Limpia todo el sessionStorage
     sessionStorage.clear(); // Limpia también sessionStorage por si acaso
 
     // ✅ Llamar función de logout si existe

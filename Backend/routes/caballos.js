@@ -65,7 +65,7 @@ const invalidarCachePorPatron = (nivel, fecha, hora) => {
 router.get('/', async (req, res) => {
   try {
     const [caballos] = await db.query(`
-      SELECT 
+      SELECT
         c.id,
         c.nombre,
         c.propietario_id,
@@ -73,12 +73,17 @@ router.get('/', async (req, res) => {
         c.estatus,
         c.especialidad,
         c.descripcion,
-        CONCAT(u.nombre, ' ', u.apellido) as propietario_nombre
+        c.renta_cliente_id,
+        c.renta_fecha_inicio,
+        c.renta_fecha_fin,
+        CONCAT(u.nombre, ' ', u.apellido) as propietario_nombre,
+        CONCAT(ru.nombre, ' ', ru.apellido) as renta_cliente_nombre
       FROM caballos c
       LEFT JOIN usuarios u ON c.propietario_id = u.id
+      LEFT JOIN usuarios ru ON c.renta_cliente_id = ru.id
       ORDER BY c.nombre ASC
     `);
-    
+
     res.json(caballos);
   } catch (error) {
     console.error('Error al obtener caballos:', error);
@@ -328,7 +333,10 @@ router.post('/', async (req, res) => {
       disponibilidad = 'disponible',
       estatus = 'publico',
       especialidad = 'mixto',
-      descripcion = ''
+      descripcion = '',
+      renta_cliente_id = null,
+      renta_fecha_inicio = null,
+      renta_fecha_fin = null
     } = req.body;
     
     console.log('📋 Especialidad extraída:', especialidad, 'Tipo:', typeof especialidad);
@@ -386,20 +394,26 @@ router.post('/', async (req, res) => {
     // Insertar el nuevo caballo
     const [result] = await db.query(`
       INSERT INTO caballos (
-        nombre, 
-        propietario_id, 
-        disponibilidad, 
-        estatus, 
-        especialidad, 
-        descripcion
-      ) VALUES (?, ?, ?, ?, ?, ?)
+        nombre,
+        propietario_id,
+        disponibilidad,
+        estatus,
+        especialidad,
+        descripcion,
+        renta_cliente_id,
+        renta_fecha_inicio,
+        renta_fecha_fin
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       nombre.trim(),
       propietario_id || null,
       disponibilidad,
       estatus,
       especialidadFinal,
-      descripcion.trim()
+      descripcion.trim(),
+      renta_cliente_id || null,
+      renta_fecha_inicio || null,
+      renta_fecha_fin || null
     ]);
 
     // Obtener el caballo recién creado
@@ -438,7 +452,10 @@ router.put('/:id', async (req, res) => {
       disponibilidad,
       estatus,
       especialidad,
-      descripcion
+      descripcion,
+      renta_cliente_id,
+      renta_fecha_inicio,
+      renta_fecha_fin
     } = req.body;
 
     // Verificar que el caballo existe
@@ -539,6 +556,18 @@ router.put('/:id', async (req, res) => {
     if (descripcion !== undefined) {
       updates.push('descripcion = ?');
       values.push(descripcion.trim());
+    }
+    if (renta_cliente_id !== undefined) {
+      updates.push('renta_cliente_id = ?');
+      values.push(renta_cliente_id || null);
+    }
+    if (renta_fecha_inicio !== undefined) {
+      updates.push('renta_fecha_inicio = ?');
+      values.push(renta_fecha_inicio || null);
+    }
+    if (renta_fecha_fin !== undefined) {
+      updates.push('renta_fecha_fin = ?');
+      values.push(renta_fecha_fin || null);
     }
 
     if (updates.length === 0) {
@@ -772,6 +801,54 @@ router.get('/:id/actividades-dia', async (req, res) => {
   } catch (error) {
     console.error('Error al obtener actividades del caballo:', error);
     res.status(500).json({ error: 'Error al obtener actividades del caballo' });
+  }
+});
+
+// GET /api/caballos/:id/perfil?fecha=YYYY-MM-DD - Perfil del caballo
+// Devuelve estado, nivel/especialidad, propietario, renta (+ a quién), conteo de
+// salidas del día y observaciones. fecha por defecto = hoy.
+router.get('/:id/perfil', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const fecha = req.query.fecha || new Date().toISOString().split('T')[0];
+
+    const [rows] = await db.query(`
+      SELECT
+        c.id, c.nombre, c.disponibilidad, c.estatus, c.especialidad, c.descripcion,
+        c.propietario_id, c.renta_cliente_id, c.renta_fecha_inicio, c.renta_fecha_fin,
+        CONCAT(u.nombre, ' ', u.apellido) AS propietario_nombre,
+        CONCAT(ru.nombre, ' ', ru.apellido) AS renta_cliente_nombre
+      FROM caballos c
+      LEFT JOIN usuarios u ON c.propietario_id = u.id
+      LEFT JOIN usuarios ru ON c.renta_cliente_id = ru.id
+      WHERE c.id = ?
+    `, [id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Caballo no encontrado' });
+    }
+
+    const [salidas] = await db.query(`
+      SELECT COUNT(*) AS total
+      FROM reservas r
+      WHERE r.caballo_id = ?
+        AND r.fecha = ?
+        AND r.estatus IN ('confirmada', 'completada')
+    `, [id, fecha]);
+
+    const c = rows[0];
+    const enRentaHoy = c.estatus === 'renta' || c.estatus === 'media_renta';
+
+    res.json({
+      ...c,
+      fecha,
+      salidas_dia: salidas[0]?.total || 0,
+      en_renta: enRentaHoy,
+      renta_con: enRentaHoy ? (c.renta_cliente_nombre || null) : null
+    });
+  } catch (error) {
+    console.error('Error al obtener perfil del caballo:', error);
+    res.status(500).json({ error: 'Error al obtener el perfil del caballo' });
   }
 });
 

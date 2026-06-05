@@ -6,7 +6,7 @@ export default function useRoleGuard(requiredRoles) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
+    const userStr = sessionStorage.getItem('user');
     if (!userStr) {
       navigate('/login', { replace: true });
       return;
@@ -15,7 +15,7 @@ export default function useRoleGuard(requiredRoles) {
     try {
       user = JSON.parse(userStr);
     } catch {
-      localStorage.removeItem('user');
+      sessionStorage.removeItem('user');
       navigate('/login', { replace: true });
       return;
     }

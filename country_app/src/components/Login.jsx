@@ -59,7 +59,7 @@ const Login = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const user = localStorage.getItem('user');
+    const user = sessionStorage.getItem('user');
     if (user) {
       try {
         const parsedUser = JSON.parse(user);
@@ -68,7 +68,7 @@ const Login = () => {
           navigate(redirectPath, { replace: true });
         }
       } catch (error) {
-        localStorage.clear();
+        sessionStorage.clear();
       }
     }
   }, [navigate, location]);
@@ -124,36 +124,22 @@ const Login = () => {
         throw new Error("Servidor no respondió correctamente (no JSON)");
       }
 
-      if (response.ok && data.user) {
-        localStorage.removeItem("user");
-        localStorage.setItem("user", JSON.stringify(data.user));
-
-        const estado = (data.user.estatus || "").toLowerCase();
-        if (estado === "activo") {
-          setShowSuccess(true);
-          setEstadoMsg("");
-          setTimeout(() => {
-            const redirectPath = getRedirectRoute(data.user.rol);
-            navigate(redirectPath);
-          }, 1000);
-        } else if (estado === "inactivo") {
-          setShowSuccess(true);
-          setEstadoMsg("Tu cuenta está inactiva. Comunícate con el administrador.");
-          setTimeout(() => {
-            const redirectPath = getRedirectRoute(data.user.rol);
-            navigate(redirectPath);
-          }, 2000);
-        } else if (estado === "pendiente") {
-          setShowSuccess(false);
-          setEstadoMsg("Tienes pagos pendientes y no puedes iniciar sesión.");
-        } else if (estado === "bloqueado") {
-          setShowSuccess(false);
-          setEstadoMsg("Tu cuenta está bloqueada y no puedes iniciar sesión.");
-        } else {
-          setShowSuccess(false);
-          setEstadoMsg("Estado de usuario no permitido.");
-        }
+      // Solo se permite el ingreso si el backend devuelve sesión (usuario ACTIVO).
+      // Para inactivo/bloqueado/pendiente el backend responde 403 sin `user`.
+      const estado = (data.user?.estatus || "").toLowerCase();
+      if (response.ok && data.user && estado === "activo") {
+        sessionStorage.removeItem("user");
+        sessionStorage.setItem("user", JSON.stringify(data.user));
+        setShowSuccess(true);
+        setEstadoMsg("");
+        setTimeout(() => {
+          const redirectPath = getRedirectRoute(data.user.rol);
+          navigate(redirectPath);
+        }, 1000);
       } else {
+        // No guardar sesión ni redirigir: cuenta no activa o credenciales inválidas.
+        sessionStorage.removeItem("user");
+        setShowSuccess(false);
         throw new Error(data.mensaje || data.message || "Usuario o contraseña incorrectos");
       }
     } catch (error) {

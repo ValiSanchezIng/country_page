@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         // Check for stored user on mount
-        const storedUser = localStorage.getItem("equestrian_user")
+        const storedUser = sessionStorage.getItem("equestrian_user")
         if (storedUser) {
             setUser(JSON.parse(storedUser))
         }
@@ -43,7 +43,7 @@ export function AuthProvider({ children }) {
         const userRecord = MOCK_USERS[email]
         if (userRecord && userRecord.password === password) {
             setUser(userRecord.user)
-            localStorage.setItem("equestrian_user", JSON.stringify(userRecord.user))
+            sessionStorage.setItem("equestrian_user", JSON.stringify(userRecord.user))
             return true
         }
         return false
@@ -51,7 +51,7 @@ export function AuthProvider({ children }) {
 
     const logout = () => {
         setUser(null)
-        localStorage.removeItem("equestrian_user")
+        sessionStorage.removeItem("equestrian_user")
     }
 
     return <AuthContext.Provider value={{ user, login, logout, isLoading }}>{children}</AuthContext.Provider>

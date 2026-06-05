@@ -1,7 +1,64 @@
 import express from 'express';
+import axios from 'axios';
 import db from '../server/db.js';
 
 const router = express.Router();
+
+// Cancela las reservas activas afectadas por un bloqueo (fecha+turno+clase) y
+// envía a cada cliente el correo de cancelación con el motivo. No bloquea la
+// respuesta si algún correo falla. claseId = null => aplica a todas las clases.
+const cancelarReservasPorBloqueo = async (fechaSQL, turno, claseId, motivo) => {
+  // mañana = clases con hora_inicio < 12:00; tarde = hora_inicio >= 12:00
+  const horaCmp = turno === 'mañana' ? '< \'12:00:00\'' : '>= \'12:00:00\'';
+  const claseClause = claseId === null ? '' : 'AND r.clase_id = ?';
+  const params = [fechaSQL];
+  if (claseId !== null) params.push(claseId);
+
+  const [reservas] = await db.query(`
+    SELECT r.id, r.fecha, r.hora_inicio, r.hora_fin,
+           u.nombre, u.apellido, u.correo,
+           i.nombre AS inst_nombre, i.apellido AS inst_apellido
+    FROM reservas r
+    LEFT JOIN usuarios u ON u.id = r.cliente_id
+    LEFT JOIN instructoras inst ON inst.id = r.instructora_id
+    LEFT JOIN usuarios i ON inst.usuario_id = i.id
+    WHERE r.fecha = ?
+      AND r.estatus IN ('pendiente','confirmada')
+      AND r.hora_inicio ${horaCmp}
+      ${claseClause}
+  `, params);
+
+  if (reservas.length === 0) return 0;
+
+  const ids = reservas.map(r => r.id);
+  const placeholders = ids.map(() => '?').join(',');
+  const obs = `\n[Cancelación administrativa]${motivo ? ` Motivo: ${motivo}` : ''}`;
+  await db.query(`
+    UPDATE reservas
+    SET estatus = 'cancelada_instructor',
+        caballo_id = NULL,
+        observaciones = CONCAT(COALESCE(observaciones, ''), ?)
+    WHERE id IN (${placeholders})
+  `, [obs, ...ids]);
+
+  for (const r of reservas) {
+    if (!r.correo || r.correo.trim() === '') continue;
+    const fechaStr = r.fecha instanceof Date ? r.fecha.toISOString().split('T')[0] : String(r.fecha).split('T')[0];
+    const instructor = r.inst_nombre ? `${r.inst_nombre} ${r.inst_apellido || ''}`.trim() : null;
+    const payload = {
+      email: r.correo.trim(),
+      nombre: `${r.nombre || ''} ${r.apellido || ''}`.trim(),
+      fechaReserva: fechaStr,
+      horaInicio: r.hora_inicio ? String(r.hora_inicio).slice(0, 5) : '',
+      horaFin: r.hora_fin ? String(r.hora_fin).slice(0, 5) : '',
+      instructor,
+      motivoCancelacion: motivo || 'La clase fue cancelada por el administrador'
+    };
+    axios.post('https://elrefugiocountryclub.com/api/api/email/send-cancellation-notification', payload)
+      .catch(e => console.error(`⚠️ Error email cancelación bloqueo a ${r.correo}:`, e.message));
+  }
+  return reservas.length;
+};
 
 // Función para formatear fechas para MySQL (mismo helper que descansos.js)
 const formatDateForMySQL = (dateString) => {
@@ -210,19 +267,28 @@ router.post('/', async (req, res) => {
 
     // Insertar todas las filas (1 por cada id, o 1 con NULL para "Todas")
     const insertedIds = [];
+    let reservasCanceladas = 0;
     for (const idCandidato of idsToInsert) {
       const [result] = await db.query(`
         INSERT INTO bloqueos_clase (clase_id, fecha, turno, motivo, creado_por)
         VALUES (?, ?, ?, ?, ?)
       `, [idCandidato, fechaSQL, turno, motivo || null, creado_por || null]);
       insertedIds.push(result.insertId);
+
+      // Cancelar reservas activas afectadas y notificar por correo (no bloquea).
+      try {
+        reservasCanceladas += await cancelarReservasPorBloqueo(fechaSQL, turno, idCandidato, motivo || null);
+      } catch (e) {
+        console.error('Error cancelando reservas por bloqueo:', e.message);
+      }
     }
 
     res.json({
       message: insertedIds.length > 1
         ? `${insertedIds.length} bloqueos creados correctamente`
         : 'Bloqueo creado correctamente',
-      ids: insertedIds
+      ids: insertedIds,
+      reservas_canceladas: reservasCanceladas
     });
   } catch (err) {
     console.error('Error creando bloqueo:', err);

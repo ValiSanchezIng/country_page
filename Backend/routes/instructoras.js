@@ -15,6 +15,7 @@ router.get('/', async (req, res) => {
         i.num_contacto,
         i.especialidad,
         i.disponibilidad,
+        i.tipo_instructor,
         i.fecha_registro,
         u.correo,
         u.estatus
@@ -65,6 +66,7 @@ router.get('/:id', async (req, res) => {
         i.num_contacto,
         i.especialidad,
         i.disponibilidad,
+        i.tipo_instructor,
         i.fecha_registro,
         u.correo,
         u.estatus
@@ -114,10 +116,11 @@ router.get('/clases/:usuario_id', async (req, res) => {
   try {
     // Primero obtener la información de la instructora
     const [instructoraRows] = await db.query(`
-      SELECT 
+      SELECT
         i.id as instructora_id,
         i.nombre,
-        i.apellido
+        i.apellido,
+        i.tipo_instructor
       FROM instructoras i
       WHERE i.usuario_id = ?
     `, [usuario_id]);
@@ -130,22 +133,35 @@ router.get('/clases/:usuario_id', async (req, res) => {
     }
     
     const instructora = instructoraRows[0];
-    
-    console.log(`📋 Buscando clases para instructora ID: ${instructora.instructora_id} (${instructora.nombre} ${instructora.apellido})`);
-    
+    const esInstructorAdmin = instructora.tipo_instructor === 'admin';
+
+    console.log(`📋 Buscando clases para instructora ID: ${instructora.instructora_id} (${instructora.nombre} ${instructora.apellido}) — tipo: ${instructora.tipo_instructor}`);
+
     // Actualizar clases pasadas de pendiente/confirmada a completada automáticamente (+30 min)
-    await db.query(`
-      UPDATE reservas 
-      SET estatus = 'completada'
-      WHERE instructora_id = ?
-      AND estatus IN ('pendiente', 'confirmada')
-      AND TIMESTAMP(fecha, hora_fin) < DATE_SUB(NOW(), INTERVAL 30 MINUTE)
-    `, [instructora.instructora_id]);
-    
-    // Obtener todas las reservas/clases de esta instructora
+    // El instructor admin las actualiza para todas; el general sólo las suyas.
+    if (esInstructorAdmin) {
+      await db.query(`
+        UPDATE reservas
+        SET estatus = 'completada'
+        WHERE estatus IN ('pendiente', 'confirmada')
+        AND TIMESTAMP(fecha, hora_fin) < DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+      `);
+    } else {
+      await db.query(`
+        UPDATE reservas
+        SET estatus = 'completada'
+        WHERE instructora_id = ?
+        AND estatus IN ('pendiente', 'confirmada')
+        AND TIMESTAMP(fecha, hora_fin) < DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+      `, [instructora.instructora_id]);
+    }
+
+    // El instructor admin ve TODAS las reservas; el general sólo las suyas.
+    const filtroInstructora = esInstructorAdmin ? '' : 'WHERE r.instructora_id = ?';
+    const paramsClases = esInstructorAdmin ? [] : [instructora.instructora_id];
 
     const [clasesRows] = await db.query(`
-      SELECT 
+      SELECT
         r.id,
         r.cliente_id as cliente_id,
         r.fecha,
@@ -156,16 +172,25 @@ router.get('/clases/:usuario_id', async (req, res) => {
         u.tipo_nivel as student_nivel,
         c.nombre as type,
         cab.nombre as horse,
+        r.caballo_id,
+        cab.estatus as caballo_estatus,
+        CONCAT(ru.nombre, ' ', ru.apellido) as caballo_renta_cliente,
         r.estatus as status,
         r.motivo_cancelacion,
+        r.actividad,
+        r.observaciones,
+        r.instructora_id,
+        CONCAT(inst.nombre, ' ', inst.apellido) as instructora_nombre,
         'pendiente' as attendance
       FROM reservas r
       LEFT JOIN clases c ON r.clase_id = c.id
       LEFT JOIN caballos cab ON r.caballo_id = cab.id
+      LEFT JOIN usuarios ru ON cab.renta_cliente_id = ru.id
       LEFT JOIN usuarios u ON r.cliente_id = u.id
-      WHERE r.instructora_id = ?
+      LEFT JOIN instructoras inst ON r.instructora_id = inst.id
+      ${filtroInstructora}
       ORDER BY r.fecha DESC, r.hora_inicio ASC
-    `, [instructora.instructora_id]);
+    `, paramsClases);
 
     console.log(`🎯 Encontradas ${clasesRows.length} reservas para la instructora`);
     console.log('📊 Primeras 2 reservas:', clasesRows.slice(0, 2));
@@ -190,15 +215,23 @@ router.get('/clases/:usuario_id', async (req, res) => {
         status: clase.status || 'pendiente',
         motivo_cancelacion: clase.motivo_cancelacion || '',
         attendance: clase.attendance || 'pendiente',
+        actividad: clase.actividad || '',
+        observaciones: clase.observaciones || '',
+        caballo_id: clase.caballo_id || null,
+        caballo_estatus: clase.caballo_estatus || null,
+        caballo_renta_cliente: clase.caballo_renta_cliente || null,
+        instructora_id: clase.instructora_id,
+        instructora_nombre: clase.instructora_nombre || '',
         level: clase.student_nivel || 'Intermedio' // Mantenemos level para compatibilidad
       };
     });
-    
+
     res.json({
       instructora: {
         id: instructora.instructora_id,
         nombre: instructora.nombre,
-        apellido: instructora.apellido
+        apellido: instructora.apellido,
+        tipo_instructor: instructora.tipo_instructor || 'general'
       },
       clases: clasesFormateadas
     });
@@ -217,7 +250,7 @@ router.get('/by-user/:userId', async (req, res) => {
     console.log(`🔍 Buscando instructora_id para usuario_id: ${userId}`);
     
     const [rows] = await db.query(`
-      SELECT id as instructora_id, nombre, apellido
+      SELECT id as instructora_id, nombre, apellido, tipo_instructor
       FROM instructoras
       WHERE usuario_id = ?
     `, [userId]);
@@ -351,15 +384,17 @@ router.put('/reservas/:id/asistencia', async (req, res) => {
 // Crear nueva instructora
 // Este endpoint crea tanto el usuario como el registro en instructoras
 router.post('/', async (req, res) => {
-  const { 
-    nombre, 
-    apellido, 
-    correo, 
-    telefono, 
+  const {
+    nombre,
+    apellido,
+    correo,
+    telefono,
     disponibilidad,
     customPassword,
-    especialidad 
+    especialidad,
+    tipo_instructor
   } = req.body;
+  const tipoInstructor = tipo_instructor === 'admin' ? 'admin' : 'general';
   
   // Validar campos requeridos
   if (!nombre || !apellido) {
@@ -402,9 +437,9 @@ router.post('/', async (req, res) => {
     
     // 4. Crear registro en tabla instructoras
     const [instructorResult] = await connection.query(
-      `INSERT INTO instructoras (usuario_id, nombre, apellido, num_contacto, especialidad, disponibilidad, fecha_registro) 
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-      [usuarioId, nombre, apellido, telefono, especialidad || '', disponibilidad || 'disponible']
+      `INSERT INTO instructoras (usuario_id, nombre, apellido, num_contacto, especialidad, disponibilidad, tipo_instructor, fecha_registro)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+      [usuarioId, nombre, apellido, telefono, especialidad || '', disponibilidad || 'disponible', tipoInstructor]
     );
     
     const instructoraId = instructorResult.insertId;
@@ -468,7 +503,7 @@ router.post('/', async (req, res) => {
 // Actualizar instructora completa
 router.put('/:id', async (req, res) => {
   const { id } = req.params;
-  const { nombre, apellido, num_contacto, correo, especialidad, disponibilidad } = req.body;
+  const { nombre, apellido, num_contacto, correo, especialidad, disponibilidad, tipo_instructor } = req.body;
   
   const connection = await db.getConnection();
   
@@ -516,7 +551,12 @@ router.put('/:id', async (req, res) => {
       updateFieldsInstructor.push('disponibilidad = ?');
       updateValuesInstructor.push(disponibilidad);
     }
-    
+
+    if (tipo_instructor !== undefined) {
+      updateFieldsInstructor.push('tipo_instructor = ?');
+      updateValuesInstructor.push(tipo_instructor === 'admin' ? 'admin' : 'general');
+    }
+
     if (updateFieldsInstructor.length > 0) {
       updateValuesInstructor.push(id);
       await connection.query(
