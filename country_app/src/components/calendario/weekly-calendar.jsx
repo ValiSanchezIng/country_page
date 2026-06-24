@@ -371,19 +371,20 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
       // 🕐 FILTRO 1: Detectar si el slot ya pasó completamente
       const hasPassed = slotEndTime < now;
       
-      // ⏰ FILTRO 2: Calcular si está dentro de las próximas 2 horas o ya está en curso
-      // Plazo de reserva: mañana (< 12:00) cierra a las 9 PM del día anterior; tarde (≥ 12:00) cierra a la 1 PM del mismo día
+      // ⏰ FILTRO 2: Plazo de reserva único — cierre a las 10:00 PM del día ANTERIOR
+      // a la clase (mañana y tarde). Debe coincidir con la validación del backend.
+      // Propietario y renta están exentos (pueden reservar cuando quieran).
       const esMañana = hours < 12;
-      let isWithin2Hours;
-      if (esMañana) {
-        const limiteReserva = slotStartTime.minus({ days: 1 }).set({ hour: 21, minute: 0, second: 0, millisecond: 0 });
-        isWithin2Hours = now > limiteReserva;
-      } else {
-        const limiteReserva = slotStartTime.set({ hour: 13, minute: 0, second: 0, millisecond: 0 });
+      const sinLimitesPlazo = userType === 'propietario' || userType === 'renta';
+      let isWithin2Hours = false;
+      if (!sinLimitesPlazo) {
+        const limiteReserva = slotStartTime
+          .minus({ days: 1 })
+          .set({ hour: 22, minute: 0, second: 0, millisecond: 0 });
         isWithin2Hours = now > limiteReserva;
       }
       const deadlineMessage = isWithin2Hours
-        ? (esMañana ? 'Cierre 9:00 PM día anterior' : 'Cierre 1:00 PM mismo día')
+        ? 'Cierre 10:00 PM día anterior'
         : null;
 
       // Filtrar reservas del usuario para este slot (ocupado si no está cancelada o cancelada por instructor)
@@ -647,10 +648,10 @@ export function WeeklyCalendar({ userLevel, userId, userType, onSlotClick, userB
                 const slotHour = parseInt(slot.time);
                 if (slotHour < 12 && !morningHeaderInserted) {
                   morningHeaderInserted = true;
-                  items.push(<div key="wc-morning-header" className="wc-group-header">Clases de mañana · reservas hasta las 9:00 PM del día anterior</div>);
+                  items.push(<div key="wc-morning-header" className="wc-group-header">Clases de mañana · reservas hasta las 10:00 PM del día anterior</div>);
                 } else if (slotHour >= 12 && !afternoonHeaderInserted) {
                   afternoonHeaderInserted = true;
-                  items.push(<div key="wc-afternoon-header" className="wc-group-header">Clases de tarde · reservas hasta la 1:00 PM del mismo día</div>);
+                  items.push(<div key="wc-afternoon-header" className="wc-group-header">Clases de tarde · reservas hasta las 10:00 PM del día anterior</div>);
                 }
                 items.push(card);
                 return items;
