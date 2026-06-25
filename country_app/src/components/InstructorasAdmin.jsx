@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import ReactDOM from "react-dom";
-import { Loader, UserPlus, Edit, Trash2, Calendar, Clock, Search, CheckCircle, Coffee, Mail, Phone, Award, MoreVertical, Unlock, SlidersHorizontal, Info } from "lucide-react";
+import { Loader, UserPlus, Edit, Trash2, Calendar, Clock, Search, CheckCircle, Coffee, Mail, Phone, Award, MoreVertical, Unlock, SlidersHorizontal, Info, GraduationCap } from "lucide-react";
 
 const InstructorasAdmin = () => {
   const [instructoras, setInstructoras] = useState([]);
@@ -1296,73 +1296,48 @@ const InstructorasAdmin = () => {
         </div>
       )}
       
-      <div className="controls-container enhanced-controls" style={{ marginBottom: "1rem" }}>
-        <div className="controls-inner">
-          <h2 style={{ margin: 0, color: "var(--primary-brown)" }}>Gestión de Instructoras</h2>
-          <button className="add-client-btn" onClick={openAddInstructorModal} type="button">
-            <UserPlus size={18} /> Nueva Instructora
-          </button>
+      <div className="inst-header">
+        <div>
+          <h2 className="inst-title"><GraduationCap size={22} /> Gestión de Instructoras</h2>
+          <p className="inst-desc">Administra las instructoras del club, su disponibilidad, horarios y descansos.</p>
         </div>
+        <button className="inst-btn-nuevo" onClick={openAddInstructorModal} type="button">
+          <UserPlus size={18} /> Nueva Instructora
+        </button>
       </div>
 
-      <div className="controls-bar">
-        <div className="controls-search">
-          <Search size={18} className="controls-search-icon" />
-          <input
-            type="text"
-            className="controls-search-input"
-            placeholder="Buscar por nombre o email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            autoComplete="off"
-          />
-        </div>
-        <div className="controls-filters">
-          <div className="controls-filter-item">
-            <label className={`controls-filter-label ${availabilityFilter ? "label-active" : ""}`}>Disponibilidad</label>
-            <select className={`controls-filter-select ${availabilityFilter ? "filter-active" : ""}`} value={availabilityFilter} onChange={(e) => setAvailabilityFilter(e.target.value)}>
-              <option value="disponible">Solo disponibles</option>
-              <option value="">Todas las instructoras</option>
-              <option value="no_disponible">Solo no disponibles</option>
-            </select>
+      <div className="inst-lista">
+        {/* Filtros integrados en la card */}
+        <div className="inst-filtros">
+          <div className="inst-search-wrap">
+            <Search size={14} className="inst-search-icon" />
+            <input
+              type="text"
+              className="inst-search-input"
+              placeholder="Buscar por nombre o email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              autoComplete="off"
+            />
           </div>
+          <select className="inst-filter-select" value={availabilityFilter} onChange={(e) => setAvailabilityFilter(e.target.value)}>
+            <option value="disponible">Solo disponibles</option>
+            <option value="">Todas las instructoras</option>
+            <option value="no_disponible">Solo no disponibles</option>
+          </select>
         </div>
-      </div>
 
-      {!loading && (
-        <p style={{ margin: '0 0 0.6rem', fontSize: '0.84rem', color: 'var(--charcoal)', lineHeight: 1.5 }}>
+        {/* Resumen de filtros */}
+        <p className="inst-summary">
           Mostrando <strong>{filteredInstructoras.length} instructora{filteredInstructoras.length !== 1 ? 's' : ''}</strong>
           {' · '}{availabilityFilter === 'disponible' ? 'Solo disponibles' : availabilityFilter === 'no_disponible' ? 'Solo no disponibles' : 'Todas'}
           {!availabilityFilter && !searchTerm && (
-            <span style={{ fontStyle: 'italic', opacity: 0.6 }}> · Usa los filtros para ajustar la búsqueda</span>
+            <span className="inst-summary-hint"> · Usa los filtros para ajustar la búsqueda</span>
           )}
         </p>
-      )}
 
-      {loading ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "4rem 2rem",
-            background: "rgba(255, 255, 255, 0.9)",
-            borderRadius: "16px",
-            boxShadow: "0 4px 20px rgba(107,68,35,0.06)",
-          }}
-        >
-          <Loader size={40} className="spin" style={{ color: "var(--terracotta)", marginBottom: "1rem" }} />
-          <div
-            style={{
-              color: "var(--primary-brown)",
-              fontSize: "1.1rem",
-              fontWeight: "600",
-            }}
-          >
-            Cargando instructoras...
-          </div>
-        </div>
-      ) : (
-        <div className="table-container">
-          <table className="members-table">
+        <div className="inst-table-wrap">
+          <table className="inst-table">
             <thead>
               <tr>
                 <th>Nombre</th>
@@ -1371,17 +1346,23 @@ const InstructorasAdmin = () => {
                 <th>Especialidad</th>
                 <th>Disponibilidad</th>
                 <th>Fecha Registro</th>
-                <th>Acciones</th>
+                <th className="inst-th-acciones">Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {(() => {
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="inst-empty-cell">
+                    <Loader size={32} className="spin" /> Cargando instructoras...
+                  </td>
+                </tr>
+              ) : (() => {
                 const filtered = filteredInstructoras;
                 return filtered.length === 0 ? (
                 <tr>
                   <td
                     colSpan={7}
-                    className="empty-state-cell"
+                    className="inst-empty-cell"
                   >
                     {searchTerm || availabilityFilter ? "No se encontraron instructoras con los filtros aplicados." : "No hay instructoras registradas."}
                   </td>
@@ -1499,8 +1480,8 @@ const InstructorasAdmin = () => {
             </tbody>
           </table>
         </div>
-      )}
-      
+      </div>{/* /inst-lista */}
+
       {/* Dropdown de acciones como portal */}
       {openMenuId !== null && menuPos.instructorId && (() => {
         const inst = filteredInstructoras.find(i => i.id === menuPos.instructorId) || instructoras.find(i => i.id === menuPos.instructorId);

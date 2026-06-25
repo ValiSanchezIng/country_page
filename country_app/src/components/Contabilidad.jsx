@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import ReactDOM from "react-dom"
 import "../CSS/Contabilidad.css"
 import LogoutButton from './LogoutBoton'
-import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit, Copy, ChevronLeft, ChevronRight, Users, UserCheck, UserX } from "lucide-react"
+import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit, Copy, ChevronLeft, ChevronRight, Users, UserCheck, UserX, PawPrint, GraduationCap, CalendarDays, CalendarPlus, Ban, CalendarCheck, LayoutGrid, BarChart3, ShieldCheck, Home, ArrowRight, Bell } from "lucide-react"
 import useRoleGuard from '../hooks/useRoleGuard';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import CaballosAdmin from "./CaballosAdmin";
@@ -71,7 +71,7 @@ const MembershipAdminDashboard = () => {
     observaciones: "",
   })
   const [previewEdited, setPreviewEdited] = useState(false)
-  const [activeTab, setActiveTab] = useState("clientes")
+  const [activeTab, setActiveTab] = useState("inicio")
 
   // Refs para controlar foco y autofill
   const searchRef = useRef(null)
@@ -1052,185 +1052,287 @@ const MembershipAdminDashboard = () => {
     (m) => m.status === "Bloqueado" || (m.status === "Activo" && isPaymentExpired(m.paymentDate)),
   ).length
   const pendingUsers = clientMembers.filter((m) => m.status === "Pendiente").length
+  const overdueCount = clientMembers.filter((m) => paymentStatus[m.id]?.estado_pago === "vencido").length
+  const soonCount = clientMembers.filter((m) => paymentStatus[m.id]?.estado_pago === "proximo_vencer").length
 
   const renderPortal = (node) => ReactDOM.createPortal(node, document.body)
 
   return (
-    <div className="dashboard-container">
-      {/* HEADER */}
-      {/* HEADER UNIFICADO */}
-      <div ref={headerRef} className="admin-header-v2">
-        <div className="admin-header-top">
-          <div className="admin-header-left">
-            <h1 className="admin-header-title">Panel de Administrador</h1>
-            <p className="admin-header-sub">Gestiona usuarios y membresías de tu plataforma</p>
-          </div>
-          <div className="admin-header-right">
-            {currentUser && (
-              <LogoutButton
-                userName={currentUser.nombre || 'Admin'}
-                showUserName={true}
-              />
-            )}
-            <button className="add-client-btn" onClick={openAddClientModal} type="button">
-              <UserPlus size={18} /> Nuevo Cliente
-            </button>
+    <div className="dashboard-container admin-layout">
+      {/* SIDEBAR DE NAVEGACIÓN */}
+      <aside className="admin-sidebar" ref={tabsRef}>
+        <div className="admin-sidebar-brand">
+          <div className="admin-sidebar-logo"><ShieldCheck size={22} /></div>
+          <div className="admin-sidebar-brand-text">
+            <span className="admin-sidebar-brand-name">El Refugio</span>
+            <span className="admin-sidebar-brand-role">Administración</span>
           </div>
         </div>
 
-        {/* Stats inline */}
-        <div ref={statsRef} className="admin-header-stats">
-          <div className="admin-stat-main">
-            <span className="admin-stat-number">{totalUsers}</span>
-            <span className="admin-stat-label">clientes</span>
-          </div>
-          <div className="admin-stat-divider" />
-          <div className="admin-stat-chip admin-stat-active">
-            <span className="admin-stat-dot" style={{ background: '#9caf88' }} />
-            <strong>{activeUsers}</strong> activos
-          </div>
-          <div className="admin-stat-chip admin-stat-blocked">
-            <span className="admin-stat-dot" style={{ background: '#c17b4a' }} />
-            <strong>{blockedUsers}</strong> bloqueados
-          </div>
-          <div className="admin-stat-chip admin-stat-pending">
-            <span className="admin-stat-dot" style={{ background: '#b8b4a9' }} />
-            <strong>{pendingUsers}</strong> pendientes
-          </div>
-        </div>
-
-        {/* Tabs integradas */}
-        <div className="admin-header-tabs-wrapper">
-          <div className="admin-header-tabs" ref={tabsRef}>
-            {[
-              { key: 'clientes', label: 'Clientes' },
-              { key: 'caballos', label: 'Caballos' },
-              { key: 'instructoras', label: 'Instructoras' },
-              { key: 'reservas', label: 'Reservas' },
-              { key: 'horariosPersonalizados', label: 'Horarios Extras' },
-              { key: 'bloqueos', label: 'Bloqueos' },
-              { key: 'disponibilidad', label: 'Disponibilidad' },
-              { key: 'espacios', label: 'Espacios' },
-              { key: 'metricas', label: 'Métricas' },
-            ].map(tab => (
+        <nav className="admin-sidebar-nav">
+          {[
+            { key: 'inicio', label: 'Inicio', icon: Home },
+            { key: 'clientes', label: 'Clientes', icon: Users },
+            { key: 'caballos', label: 'Caballos', icon: PawPrint },
+            { key: 'instructoras', label: 'Instructoras', icon: GraduationCap },
+            { key: 'reservas', label: 'Reservas', icon: CalendarDays },
+            { key: 'horariosPersonalizados', label: 'Horarios Extras', icon: CalendarPlus },
+            { key: 'bloqueos', label: 'Bloqueos', icon: Ban },
+            { key: 'disponibilidad', label: 'Disponibilidad', icon: CalendarCheck },
+            { key: 'espacios', label: 'Espacios', icon: LayoutGrid },
+            { key: 'metricas', label: 'Métricas', icon: BarChart3 },
+            { key: 'metricascab', label: 'Métricas Caballos', icon: BarChart3 }
+          ].map(tab => {
+            const TabIcon = tab.icon
+            return (
               <button
                 key={tab.key}
-                className={activeTab === tab.key ? 'admin-tab admin-tab-active' : 'admin-tab'}
+                className={activeTab === tab.key ? 'admin-nav-item admin-nav-item-active' : 'admin-nav-item'}
                 onClick={() => setActiveTab(tab.key)}
               >
-                {tab.label}
+                <TabIcon size={18} className="admin-nav-icon" />
+                <span className="admin-nav-label">{tab.label}</span>
               </button>
-            ))}
+            )
+          })}
+        </nav>
+
+        {currentUser && (
+          <div className="admin-sidebar-footer">
+            <LogoutButton
+              userName={currentUser.nombre || 'Admin'}
+              showUserName={true}
+            />
+          </div>
+        )}
+      </aside>
+
+      {/* ÁREA PRINCIPAL */}
+      <div className="admin-main">
+
+      {/* CONTENIDO DE INICIO */}
+      {activeTab === "inicio" && (
+        <div className="tab-content tab-content-visible">
+          {/* TOPBAR - solo en Inicio */}
+          <div ref={headerRef} className="admin-topbar">
+            <div className="admin-header-left">
+              <h1 className="admin-header-title">Panel de Administrador</h1>
+              <p className="admin-header-sub">Gestiona usuarios y membresías de tu plataforma</p>
+            </div>
+            <div className="admin-header-right">
+              <button className="add-client-btn" onClick={openAddClientModal} type="button">
+                <UserPlus size={18} /> Nuevo Cliente
+              </button>
+            </div>
+          </div>
+
+          {/* Bienvenida */}
+          <div className="home-welcome">
+            <div className="home-welcome-text">
+              <h2 className="home-welcome-title">
+                ¡Hola{currentUser?.nombre ? `, ${currentUser.nombre}` : ''}! 👋
+              </h2>
+              <p className="home-welcome-sub">Este es el resumen general de tu club.</p>
+            </div>
+          </div>
+
+          {/* KPIs */}
+          <div ref={statsRef} className="admin-stats-band">
+            <div className="admin-stat-card admin-stat-card-total">
+              <div className="admin-stat-icon"><Users size={22} /></div>
+              <div className="admin-stat-text">
+                <span className="admin-stat-number">{totalUsers}</span>
+                <span className="admin-stat-label">Clientes totales</span>
+              </div>
+            </div>
+            <div className="admin-stat-card admin-stat-card-active">
+              <div className="admin-stat-icon"><UserCheck size={22} /></div>
+              <div className="admin-stat-text">
+                <span className="admin-stat-number">{activeUsers}</span>
+                <span className="admin-stat-label">Activos</span>
+              </div>
+            </div>
+            <div className="admin-stat-card admin-stat-card-blocked">
+              <div className="admin-stat-icon"><UserX size={22} /></div>
+              <div className="admin-stat-text">
+                <span className="admin-stat-number">{blockedUsers}</span>
+                <span className="admin-stat-label">Bloqueados</span>
+              </div>
+            </div>
+            <div className="admin-stat-card admin-stat-card-pending">
+              <div className="admin-stat-icon"><Clock size={22} /></div>
+              <div className="admin-stat-text">
+                <span className="admin-stat-number">{pendingUsers}</span>
+                <span className="admin-stat-label">Pendientes</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Alertas de pago */}
+          <h3 className="home-section-title"><Bell size={16} /> Alertas de pago</h3>
+          <div className="home-alerts-grid">
+            <button
+              className="home-alert-card home-alert-overdue"
+              onClick={() => { setActiveTab('clientes'); setShowOverdueFilter(true); }}
+              type="button"
+            >
+              <div className="home-alert-icon"><AlertTriangle size={22} /></div>
+              <div className="home-alert-body">
+                <span className="home-alert-number">{overdueCount}</span>
+                <span className="home-alert-label">Pagos vencidos</span>
+              </div>
+              <ArrowRight size={18} className="home-alert-arrow" />
+            </button>
+            <button
+              className="home-alert-card home-alert-soon"
+              onClick={() => setActiveTab('clientes')}
+              type="button"
+            >
+              <div className="home-alert-icon"><Clock size={22} /></div>
+              <div className="home-alert-body">
+                <span className="home-alert-number">{soonCount}</span>
+                <span className="home-alert-label">Próximos a vencer</span>
+              </div>
+              <ArrowRight size={18} className="home-alert-arrow" />
+            </button>
+          </div>
+
+          {/* Accesos rápidos */}
+          <h3 className="home-section-title"><LayoutGrid size={16} /> Accesos rápidos</h3>
+          <div className="home-quick-grid">
+            {[
+              { key: 'clientes', label: 'Clientes', icon: Users },
+              { key: 'reservas', label: 'Reservas', icon: CalendarDays },
+              { key: 'caballos', label: 'Caballos', icon: PawPrint },
+              { key: 'instructoras', label: 'Instructoras', icon: GraduationCap },
+              { key: 'disponibilidad', label: 'Disponibilidad', icon: CalendarCheck },
+              { key: 'metricas', label: 'Métricas', icon: BarChart3 },
+              { key: 'metricascab', label: 'Métricas Caballos', icon: BarChart3 }
+            ].map(q => {
+              const QIcon = q.icon
+              return (
+                <button
+                  key={q.key}
+                  className="home-quick-card"
+                  onClick={() => setActiveTab(q.key)}
+                  type="button"
+                >
+                  <span className="home-quick-icon"><QIcon size={22} /></span>
+                  <span className="home-quick-label">{q.label}</span>
+                  <ArrowRight size={16} className="home-quick-arrow" />
+                </button>
+              )
+            })}
           </div>
         </div>
-      </div>
+      )}
 
       {/* CONTENIDO DE CLIENTES */}
       {activeTab === "clientes" && (
         <div className="tab-content tab-content-visible">
-          {/* CONTROLES */}
-          <div ref={controlsRef} className="controls-bar">
-            <div className="controls-search">
-              <Search size={18} className="controls-search-icon" />
-              <input
-                type="text"
-                className="controls-search-input"
-                placeholder="Buscar por nombre o email..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                ref={searchRef}
-                autoComplete="off"
-                name="dashboard-search"
-                autoCorrect="off"
-                spellCheck={false}
-                inputMode="search"
-                data-lpignore="true"
-                data-form-type="other"
-              />
+          {/* HEADER */}
+          <div className="cl-header">
+            <div>
+              <h2 className="cl-title"><Users size={22} /> Clientes</h2>
+              <p className="cl-desc">Gestiona los clientes del club, sus membresías y pagos.</p>
             </div>
-            <div className="controls-filters">
-              <div className="controls-filter-item">
-                <label className={`controls-filter-label ${statusFilter ? "label-active" : ""}`}>Estado</label>
-                <select className={`controls-filter-select ${statusFilter ? "filter-active" : ""}`} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                  <option value="">Todos los estados</option>
-                  <option value="Activo">Activo</option>
-                  <option value="Inactivo">Inactivo</option>
-                  <option value="Bloqueado">Bloqueado</option>
-                  <option value="Pendiente">Pendiente</option>
-                </select>
+            <button className="cl-btn-nuevo" onClick={openAddClientModal} type="button">
+              <UserPlus size={18} /> Nuevo Cliente
+            </button>
+          </div>
+
+          {/* LISTA */}
+          <div className="cl-lista">
+            {/* Filtros integrados en la card */}
+            <div ref={controlsRef} className="cl-filtros">
+              <div className="cl-search-wrap">
+                <Search size={14} className="cl-search-icon" />
+                <input
+                  type="text"
+                  className="cl-search-input"
+                  placeholder="Buscar por nombre o email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  ref={searchRef}
+                  autoComplete="off"
+                  name="dashboard-search"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  inputMode="search"
+                  data-lpignore="true"
+                  data-form-type="other"
+                />
               </div>
-              <div className="controls-filter-item">
-                <label className={`controls-filter-label ${levelFilter ? "label-active" : ""}`}>Nivel</label>
-                <select className={`controls-filter-select ${levelFilter ? "filter-active" : ""}`} value={levelFilter || ""} onChange={(e) => setLevelFilter(e.target.value)}>
-                  <option value="">Todos los niveles</option>
-                  <option value="iniciacion">Iniciacion</option>
-                  <option value="ponyclub">Ponyclub</option>
-                  <option value="paseo">Paseo</option>
-                  <option value="intermedio">Intermedio</option>
-                  <option value="avanzado">Avanzado</option>
-                </select>
-              </div>
+              <select className="cl-filter-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="">Todos los estados</option>
+                <option value="Activo">Activo</option>
+                <option value="Inactivo">Inactivo</option>
+                <option value="Bloqueado">Bloqueado</option>
+                <option value="Pendiente">Pendiente</option>
+              </select>
+              <select className="cl-filter-select" value={levelFilter || ""} onChange={(e) => setLevelFilter(e.target.value)}>
+                <option value="">Todos los niveles</option>
+                <option value="iniciacion">Iniciacion</option>
+                <option value="ponyclub">Ponyclub</option>
+                <option value="paseo">Paseo</option>
+                <option value="intermedio">Intermedio</option>
+                <option value="avanzado">Avanzado</option>
+              </select>
               <button
-                className={showOverdueFilter ? "controls-overdue-btn controls-overdue-active" : "controls-overdue-btn"}
+                className={showOverdueFilter ? "cl-overdue-btn is-active" : "cl-overdue-btn"}
                 onClick={() => setShowOverdueFilter(!showOverdueFilter)}
               >
                 <AlertTriangle size={14} />
-                <span>{showOverdueFilter ? "Mostrando solo vencidos" : "Filtrar pagos vencidos"}</span>
+                <span>{showOverdueFilter ? "Solo vencidos" : "Pagos vencidos"}</span>
                 {(() => {
                   const count = members.filter(m =>
                     m.rol === "cliente" && paymentStatus[m.id]?.estado_pago === "vencido"
                   ).length;
                   return count > 0 ? (
-                    <span className="controls-overdue-count">{count}</span>
+                    <span className="cl-overdue-count">{count}</span>
                   ) : null;
                 })()}
               </button>
             </div>
-          </div>
 
           {/* Resumen de filtros */}
-          {!loading && (
-            <p style={{ margin: '0 0 0.6rem', fontSize: '0.84rem', color: 'var(--charcoal)', lineHeight: 1.5 }}>
-              Mostrando <strong>{filteredMembers.length} cliente{filteredMembers.length !== 1 ? 's' : ''}</strong>
-              {' · '}{statusFilter || 'Todos los estados'}
-              {' · '}{levelFilter ? levelFilter.charAt(0).toUpperCase() + levelFilter.slice(1) : 'Todos los niveles'}
-              {showOverdueFilter && ' · Solo vencidos'}
-              {!statusFilter && !levelFilter && !showOverdueFilter && !searchTerm && (
-                <span style={{ fontStyle: 'italic', opacity: 0.6 }}> · Usa los filtros para ajustar la búsqueda</span>
-              )}
-            </p>
-          )}
+          <p className="cl-summary">
+            Mostrando <strong>{filteredMembers.length} cliente{filteredMembers.length !== 1 ? 's' : ''}</strong>
+            {' · '}{statusFilter || 'Todos los estados'}
+            {' · '}{levelFilter ? levelFilter.charAt(0).toUpperCase() + levelFilter.slice(1) : 'Todos los niveles'}
+            {showOverdueFilter && ' · Solo vencidos'}
+            {!statusFilter && !levelFilter && !showOverdueFilter && !searchTerm && (
+              <span className="cl-summary-hint"> · Usa los filtros para ajustar la búsqueda</span>
+            )}
+          </p>
 
           {/* TABLA */}
-          {loading ? (
-            <div className="loading-container">
-              <Loader size={40} className="spin loading-spinner" />
-              <div className="loading-text">
-                Cargando usuarios...
-              </div>
-            </div>
-          ) : (
-            <div className="table-container">
-              <div className="table-wrapper">
-                <table className="members-table">
-                  <thead>
+          <div className="cl-table-wrap">
+            <table className="cl-table">
+              <thead>
+                <tr>
+                  <th>Nombre</th>
+                  <th>Email</th>
+                  <th>Estado</th>
+                  <th>Nivel</th>
+                  <th>Mensualidad</th>
+                  <th>Último Pago</th>
+                  <th>Próximo Pago</th>
+                  <th className="cl-th-acciones">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                  {loading ? (
                     <tr>
-                      <th>Nombre</th>
-                      <th>Email</th>
-                      <th>Estado</th>
-                      <th>Nivel</th>
-                      <th>Mensualidad</th>
-                      <th>Último Pago</th>
-                      <th>Próximo Pago</th>
-                      <th>Acciones</th>
+                      <td colSpan={8} className="cl-empty-cell">
+                        <Loader size={32} className="spin" /> Cargando usuarios...
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody>
-                  {filteredMembers.length === 0 ? (
+                  ) : filteredMembers.length === 0 ? (
                     <tr>
                       <td
                         colSpan={8}
-                        className="empty-state-cell"
+                        className="cl-empty-cell"
                       >
                         {searchTerm || statusFilter
                           ? "No se encontraron usuarios con los filtros aplicados."
@@ -1388,11 +1490,10 @@ const MembershipAdminDashboard = () => {
                       )
                     })
                   )}
-                </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+              </tbody>
+            </table>
+          </div>
+          </div>{/* /cl-lista */}
 
           {/* Paginación */}
           {!loading && filteredMembers.length > itemsPerPage && (
@@ -1487,10 +1588,19 @@ const MembershipAdminDashboard = () => {
         <div className="tab-content">
           <ErrorBoundary>
             <MetricasResumen />
+          </ErrorBoundary>
+        </div>
+      )}
+
+      {activeTab === "metricascab" && (
+        <div className="tab-content">
+          <ErrorBoundary>
             <MetricasCaballos />
           </ErrorBoundary>
         </div>
       )}
+
+      </div>{/* /admin-main */}
 
       {/* MODAL EDITAR (Portal) */}
       {modalOpen &&

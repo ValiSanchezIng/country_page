@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
-import { Loader, UserPlus, Trash2, Edit, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Loader, UserPlus, Trash2, Edit, ChevronLeft, ChevronRight, Search, MoreVertical, PawPrint } from "lucide-react";
+import "../CSS/CaballosAdmin.css";
 
 const CaballosAdmin = () => {
   const [caballos, setCaballos] = useState([]);
@@ -32,6 +33,15 @@ const CaballosAdmin = () => {
   const [disponibilidadFilter, setDisponibilidadFilter] = useState("");
   const [estatusFilter, setEstatusFilter] = useState("");
   const [especialidadFilter, setEspecialidadFilter] = useState("");
+  const [openMenuId, setOpenMenuId] = useState(null);
+
+  // Cerrar menú de acciones al hacer clic fuera
+  useEffect(() => {
+    if (openMenuId === null) return;
+    const close = () => setOpenMenuId(null);
+    document.addEventListener('click', close);
+    return () => document.removeEventListener('click', close);
+  }, [openMenuId]);
 
   // Función para mostrar notificaciones
   const showNotification = (message, type = "success") => {
@@ -52,11 +62,6 @@ const CaballosAdmin = () => {
       return [...especialidadesDisponibles];
     }
     return especialidadString.split(',').map(e => e.trim()).filter(e => e !== '');
-  };
-
-  const formatEspecialidades = (especialidadesArray) => {
-    if (!especialidadesArray || especialidadesArray.length === 0) return '';
-    return especialidadesArray.join(',');
   };
 
   const handleEspecialidadToggle = (especialidad, isNewHorse = true) => {
@@ -333,116 +338,20 @@ const CaballosAdmin = () => {
   const renta = caballos.filter(c => c.estatus === "renta").length;
   const mediaRenta = caballos.filter(c => c.estatus === "media_renta").length;
 
-  useEffect(() => {
-    if (loading) return;
-    const container = document.querySelector('.caballos-admin-container .table-container')
-    const table = container?.querySelector('.members-table');
-    const thead = table?.querySelector('thead');
-    if (!container || !table || !thead) return;
-
-    let stickyHeader = null;
-
-    const calculateHeaderPosition = () => {
-      const tableRect = table.getBoundingClientRect();
-      const theadRect = thead.getBoundingClientRect();
-      return { tableRect, theadRect };
-    };
-
-    const handleTableScroll = () => {
-      if (!stickyHeader) return;
-      const rect = table.getBoundingClientRect();
-      // actualizar anchos con getBoundingClientRect
-      const originalThs = thead.querySelectorAll('th');
-      const clonedThs = stickyHeader.querySelectorAll('th');
-      originalThs.forEach((th, index) => {
-        if (clonedThs[index]) {
-          const w = th.getBoundingClientRect().width;
-          clonedThs[index].style.width = `${Math.round(w)}px`;
-        }
-      });
-      // ajustar posicion relativa al viewport
-      const left = Math.round(rect.left);
-      stickyHeader.style.left = `${left}px`;
-      stickyHeader.style.width = `${Math.round(rect.width)}px`;
-    };
-
-    const handleScroll = () => {
-      const { tableRect, theadRect } = calculateHeaderPosition();
-      if (theadRect.top <= 0 && tableRect.bottom > 100) {
-        if (!stickyHeader) {
-          stickyHeader = thead.cloneNode(true);
-          stickyHeader.style.position = 'fixed';
-          stickyHeader.style.top = '0';
-          stickyHeader.style.zIndex = '999';
-          stickyHeader.classList.add('sticky-clone');
-          stickyHeader.style.display = 'table';
-
-          // copiar anchos iniciales usando getBoundingClientRect
-          const originalThs = thead.querySelectorAll('th');
-          const clonedThs = stickyHeader.querySelectorAll('th');
-          originalThs.forEach((th, index) => {
-            if (clonedThs[index]) {
-              const w = th.getBoundingClientRect().width;
-              clonedThs[index].style.width = `${Math.round(w)}px`;
-            }
-          });
-
-          document.body.appendChild(stickyHeader);
-        }
-        if (stickyHeader) {
-          const rect = table.getBoundingClientRect();
-          stickyHeader.style.left = `${Math.round(rect.left)}px`;
-          stickyHeader.style.width = `${Math.round(rect.width)}px`;
-          stickyHeader.style.display = 'table-header-group';
-
-          // actualizar anchos precisos
-          const originalThs2 = thead.querySelectorAll('th');
-          const clonedThs2 = stickyHeader.querySelectorAll('th');
-          originalThs2.forEach((th, index) => {
-            if (clonedThs2[index]) {
-              const w = th.getBoundingClientRect().width;
-              clonedThs2[index].style.width = `${Math.round(w)}px`;
-            }
-          });
-
-          // sincronizar horizontal
-          handleTableScroll();
-        }
-      } else {
-        if (stickyHeader) {
-          stickyHeader.remove();
-          stickyHeader = null;
-        }
-      }
-    };
-
-    const initTimeout = setTimeout(() => {
-      handleScroll();
-      window.addEventListener('scroll', handleScroll);
-      window.addEventListener('resize', handleScroll);
-      container.addEventListener('scroll', handleTableScroll);
-    }, 100);
-
-    return () => {
-      clearTimeout(initTimeout);
-      window.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleScroll);
-      container.removeEventListener('scroll', handleTableScroll);
-      if (stickyHeader) {
-        stickyHeader.remove();
-      }
-    };
-  }, [loading, caballos, currentPage]);
-
   return (
     <div className="caballos-admin-container">
-      <div className="controls-container enhanced-controls" style={{ marginBottom: "1.5rem" }}>
-        <div className="controls-inner">
-          <h2 style={{ margin: 0, color: "var(--primary-brown)" }}>Gestión de Caballos</h2>
-          <button className="add-client-btn" onClick={openAddHorseModal} type="button">
-            <UserPlus size={20} /> Nuevo Caballo
-          </button>
+      <div className="ca-header">
+        <div>
+          <h2 className="ca-title">
+            <PawPrint size={22} /> Gestión de Caballos
+          </h2>
+          <p className="ca-desc">
+            Administra los caballos del club: disponibilidad, estatus, especialidades y rentas.
+          </p>
         </div>
+        <button className="ca-btn-nuevo" onClick={openAddHorseModal} type="button">
+          <UserPlus size={20} /> Nuevo Caballo
+        </button>
       </div>
 
       {/* Metricas */}
@@ -486,74 +395,56 @@ const CaballosAdmin = () => {
         </div>
       )}
 
-      {/* Barra de busqueda y filtros */}
-      {!loading && (
-        <div className="controls-bar">
-          <div className="controls-search">
-            <Search size={18} className="controls-search-icon" />
+      {/* Lista */}
+      <div className="ca-lista">
+        {/* Filtros integrados en la card */}
+        <div className="ca-filtros">
+          <div className="ca-search-wrap">
+            <Search size={14} className="ca-search-icon" />
             <input
               type="text"
-              className="controls-search-input"
+              className="ca-search-input"
               placeholder="Buscar por nombre o propietario..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               autoComplete="off"
             />
           </div>
-          <div className="controls-filters">
-            <div className="controls-filter-item">
-              <label className={`controls-filter-label ${disponibilidadFilter ? "label-active" : ""}`}>Disponibilidad</label>
-              <select className={`controls-filter-select ${disponibilidadFilter ? "filter-active" : ""}`} value={disponibilidadFilter} onChange={(e) => { setDisponibilidadFilter(e.target.value); setCurrentPage(1); }}>
-                <option value="">Todos</option>
-                <option value="disponible">Disponible</option>
-                <option value="no_disponible">No disponible</option>
-              </select>
-            </div>
-            <div className="controls-filter-item">
-              <label className={`controls-filter-label ${estatusFilter ? "label-active" : ""}`}>Estatus</label>
-              <select className={`controls-filter-select ${estatusFilter ? "filter-active" : ""}`} value={estatusFilter} onChange={(e) => { setEstatusFilter(e.target.value); setCurrentPage(1); }}>
-                <option value="">Todos</option>
-                <option value="publico">Publico</option>
-                <option value="privado">Privado</option>
-                <option value="renta">Renta</option>
-                <option value="media_renta">Media Renta</option>
-              </select>
-            </div>
-            <div className="controls-filter-item">
-              <label className={`controls-filter-label ${especialidadFilter ? "label-active" : ""}`}>Especialidad</label>
-              <select className={`controls-filter-select ${especialidadFilter ? "filter-active" : ""}`} value={especialidadFilter} onChange={(e) => { setEspecialidadFilter(e.target.value); setCurrentPage(1); }}>
-                <option value="">Todas</option>
-                <option value="iniciacion">Iniciacion</option>
-                <option value="paseo">Paseo</option>
-                <option value="intermedio">Intermedio</option>
-                <option value="avanzado">Avanzado</option>
-                <option value="salto">Salto</option>
-              </select>
-            </div>
-          </div>
+          <select className="ca-filter-select" value={disponibilidadFilter} onChange={(e) => { setDisponibilidadFilter(e.target.value); setCurrentPage(1); }}>
+            <option value="">Toda disponibilidad</option>
+            <option value="disponible">Disponible</option>
+            <option value="no_disponible">No disponible</option>
+          </select>
+          <select className="ca-filter-select" value={estatusFilter} onChange={(e) => { setEstatusFilter(e.target.value); setCurrentPage(1); }}>
+            <option value="">Todos los estatus</option>
+            <option value="publico">Publico</option>
+            <option value="privado">Privado</option>
+            <option value="renta">Renta</option>
+            <option value="media_renta">Media Renta</option>
+          </select>
+          <select className="ca-filter-select" value={especialidadFilter} onChange={(e) => { setEspecialidadFilter(e.target.value); setCurrentPage(1); }}>
+            <option value="">Todas las especialidades</option>
+            <option value="iniciacion">Iniciacion</option>
+            <option value="paseo">Paseo</option>
+            <option value="intermedio">Intermedio</option>
+            <option value="avanzado">Avanzado</option>
+            <option value="salto">Salto</option>
+          </select>
         </div>
-      )}
 
-      {!loading && (
-        <p style={{ margin: '0 0 0.6rem', fontSize: '0.84rem', color: 'var(--charcoal)', lineHeight: 1.5 }}>
+        {/* Resumen de filtros */}
+        <p className="ca-summary">
           Mostrando <strong>{filteredCaballos.length} caballo{filteredCaballos.length !== 1 ? 's' : ''}</strong>
           {' · '}{disponibilidadFilter ? (disponibilidadFilter === 'disponible' ? 'Disponibles' : 'No disponibles') : 'Toda disponibilidad'}
           {' · '}{estatusFilter ? estatusFilter.charAt(0).toUpperCase() + estatusFilter.slice(1).replace('_', ' ') : 'Todos los estatus'}
           {' · '}{especialidadFilter ? especialidadFilter.charAt(0).toUpperCase() + especialidadFilter.slice(1) : 'Todas las especialidades'}
           {!disponibilidadFilter && !estatusFilter && !especialidadFilter && !searchTerm && (
-            <span style={{ fontStyle: 'italic', opacity: 0.6 }}> · Usa los filtros para ajustar la búsqueda</span>
+            <span className="ca-summary-hint"> · Usa los filtros para ajustar la búsqueda</span>
           )}
         </p>
-      )}
 
-      {loading ? (
-        <div className="loading-container">
-          <Loader size={40} className="spin loading-spinner" />
-          <div className="loading-text">Cargando caballos...</div>
-        </div>
-      ) : (
-        <div className="table-container">
-          <table className="members-table">
+        <div className="ca-table-wrap">
+          <table className="ca-table">
             <thead>
               <tr>
                 <th>Nombre</th>
@@ -562,28 +453,39 @@ const CaballosAdmin = () => {
                 <th>Estatus</th>
                 <th>Especialidad</th>
                 <th>Descripción</th>
-                <th>Acciones</th>
+                <th className="ca-th-acciones"></th>
               </tr>
             </thead>
             <tbody>
-              {currentCaballos.length === 0 ? (
+              {loading ? (
                 <tr>
-                  <td colSpan={7} className="empty-state-cell">
-                    {searchTerm || disponibilidadFilter || estatusFilter || especialidadFilter
-                      ? "No se encontraron caballos con los filtros aplicados."
-                      : "No hay caballos registrados."}
+                  <td colSpan={7} className="ca-empty-cell">
+                    <Loader size={32} className="spin" /> Cargando caballos...
+                  </td>
+                </tr>
+              ) : currentCaballos.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="ca-empty-cell">
+                    <div className="ca-empty-inner">
+                      <PawPrint size={40} opacity={0.2} />
+                      <span>
+                        {searchTerm || disponibilidadFilter || estatusFilter || especialidadFilter
+                          ? "No se encontraron caballos con los filtros aplicados."
+                          : "No hay caballos registrados."}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 currentCaballos.map(caballo => (
-                  <tr key={caballo.id}>
-                    <td style={{ fontWeight: "600" }}>{caballo.nombre}</td>
-                    <td style={{ color: "var(--stone-gray)" }}>
-                      {caballo.propietario_nombre || <span style={{ fontStyle: "italic", color: "#999" }}>Sin propietario</span>}
+                  <tr key={caballo.id} className="ca-row">
+                    <td className="ca-td ca-td-nombre">{caballo.nombre}</td>
+                    <td className="ca-td ca-td-muted">
+                      {caballo.propietario_nombre || <span className="ca-sin">Sin propietario</span>}
                     </td>
-                    <td>
+                    <td className="ca-td">
                       <select
-                        className="status-badge"
+                        className="ca-status-select"
                         value={caballo.disponibilidad}
                         onChange={async (e) => {
                           const newDisponibilidad = e.target.value;
@@ -596,9 +498,9 @@ const CaballosAdmin = () => {
                                 body: JSON.stringify({ disponibilidad: newDisponibilidad }),
                               }
                             );
-                            
+
                             if (response.ok) {
-                              setCaballos(prev => prev.map(c => 
+                              setCaballos(prev => prev.map(c =>
                                 c.id === caballo.id ? {...c, disponibilidad: newDisponibilidad} : c
                               ));
                               showNotification("Disponibilidad actualizada correctamente", "success");
@@ -620,9 +522,9 @@ const CaballosAdmin = () => {
                         <option value="no_disponible">No disponible</option>
                       </select>
                     </td>
-                    <td>
+                    <td className="ca-td">
                       <select
-                        className="status-badge"
+                        className="ca-status-select"
                         value={caballo.estatus}
                         onChange={async (e) => {
                           const newEstatus = e.target.value;
@@ -635,9 +537,9 @@ const CaballosAdmin = () => {
                                 body: JSON.stringify({ estatus: newEstatus }),
                               }
                             );
-                            
+
                             if (response.ok) {
-                              setCaballos(prev => prev.map(c => 
+                              setCaballos(prev => prev.map(c =>
                                 c.id === caballo.id ? {...c, estatus: newEstatus} : c
                               ));
                               showNotification("Estatus actualizado correctamente", "success");
@@ -650,10 +552,7 @@ const CaballosAdmin = () => {
                             showNotification("Error de conexión", "error");
                           }
                         }}
-                        style={{
-                          borderColor: "#c17b4a",
-                          color: "#c17b4a",
-                        }}
+                        style={{ borderColor: "#c17b4a", color: "#c17b4a" }}
                       >
                         <option value="publico">Público</option>
                         <option value="privado">Privado</option>
@@ -661,77 +560,48 @@ const CaballosAdmin = () => {
                         <option value="media_renta">Media Renta</option>
                       </select>
                     </td>
-                    <td style={{ fontWeight: "600", color: "var(--primary-brown)" }}>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                    <td className="ca-td">
+                      <div className="ca-esp-list">
                         {parseEspecialidades(caballo.especialidad).map(esp => (
-                          <span 
-                            key={esp}
-                            style={{
-                              backgroundColor: '#e8f5e8',
-                              color: '#2d5016',
-                              padding: '0.2rem 0.5rem',
-                              borderRadius: '12px',
-                              fontSize: '0.75rem',
-                              fontWeight: '500',
-                              textTransform: 'capitalize',
-                              border: '1px solid #9caf88'
-                            }}
-                          >
-                            {esp}
-                          </span>
+                          <span key={esp} className="ca-esp-badge">{esp}</span>
                         ))}
                         {parseEspecialidades(caballo.especialidad).length === 0 && (
-                          <span style={{ fontStyle: 'italic', color: '#999', fontSize: '0.9rem' }}>
-                            Sin especialidades
-                          </span>
+                          <span className="ca-sin">Sin especialidades</span>
                         )}
                       </div>
                     </td>
-                    <td style={{ color: "var(--charcoal)" }}>{caballo.descripcion || "—"}</td>
-                    <td>
-                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                    <td className="ca-td ca-td-desc">{caballo.descripcion || "—"}</td>
+                    <td className="ca-td-acciones">
+                      <div className="ca-menu-wrap">
                         <button
-                          className="btn"
-                          onClick={() => openEditHorseModal(caballo)}
-                          type="button"
-                          style={{
-                            background: "linear-gradient(135deg, var(--terracotta), var(--primary-brown))",
-                            color: "white",
-                            border: "none",
-                            padding: "0.5rem 1rem",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.4rem",
-                            fontSize: "0.9rem"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenMenuId(openMenuId === caballo.id ? null : caballo.id);
                           }}
+                          className="ca-menu-trigger"
                         >
-                          <Edit size={16} />
-                          Editar
+                          <MoreVertical size={16} />
                         </button>
-                        <button
-                          className="btn"
-                          onClick={() => openConfirmDeleteModal(caballo)}
-                          type="button"
-                          disabled={deletingHorseId === caballo.id}
-                          style={{
-                            background: "linear-gradient(135deg, #8b5a2b, #6b4423)",
-                            color: "white",
-                            border: "none",
-                            padding: "0.5rem 1rem",
-                            borderRadius: "6px",
-                            cursor: deletingHorseId === caballo.id ? "not-allowed" : "pointer",
-                            opacity: deletingHorseId === caballo.id ? 0.6 : 1,
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "0.4rem",
-                            fontSize: "0.9rem"
-                          }}
-                        >
-                          <Trash2 size={16} />
-                          {deletingHorseId === caballo.id ? "Eliminando..." : "Eliminar"}
-                        </button>
+                        {openMenuId === caballo.id && (
+                          <div onClick={e => e.stopPropagation()} className="ca-menu">
+                            <button
+                              onClick={() => { setOpenMenuId(null); openEditHorseModal(caballo); }}
+                              className="ca-menu-item"
+                            >
+                              <Edit size={15} className="ca-menu-item-icon-edit" />
+                              Editar caballo
+                            </button>
+                            <div className="ca-menu-divider" />
+                            <button
+                              onClick={() => { setOpenMenuId(null); openConfirmDeleteModal(caballo); }}
+                              disabled={deletingHorseId === caballo.id}
+                              className="ca-menu-item is-danger"
+                            >
+                              <Trash2 size={15} />
+                              {deletingHorseId === caballo.id ? "Eliminando..." : "Dar de baja"}
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -740,92 +610,40 @@ const CaballosAdmin = () => {
             </tbody>
           </table>
         </div>
-      )}
+      </div>
 
       {/* Paginación */}
-      {!loading && caballos.length > itemsPerPage && (
-        <div style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          gap: "1rem",
-          marginTop: "2rem",
-          padding: "1rem"
-        }}>
+      {!loading && filteredCaballos.length > itemsPerPage && (
+        <div className="pagination-container">
           <button
+            className="pagination-btn"
             onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
             disabled={currentPage === 1}
-            style={{
-              padding: "0.5rem 1rem",
-              border: "2px solid var(--terracotta)",
-              borderRadius: "8px",
-              background: currentPage === 1 ? "#f5f5f5" : "white",
-              color: currentPage === 1 ? "#999" : "var(--terracotta)",
-              cursor: currentPage === 1 ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              fontWeight: "600",
-              transition: "all 0.2s ease"
-            }}
           >
             <ChevronLeft size={18} />
-            Anterior
+            <span>Anterior</span>
           </button>
-          
-          <div style={{
-            display: "flex",
-            gap: "0.5rem",
-            alignItems: "center"
-          }}>
+          <div className="pagination-numbers">
             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
               <button
                 key={page}
+                className={currentPage === page ? "pagination-page pagination-page-active" : "pagination-page"}
                 onClick={() => setCurrentPage(page)}
-                style={{
-                  padding: "0.5rem 0.75rem",
-                  border: currentPage === page ? "2px solid var(--terracotta)" : "2px solid #ddd",
-                  borderRadius: "6px",
-                  background: currentPage === page ? "var(--terracotta)" : "white",
-                  color: currentPage === page ? "white" : "var(--primary-brown)",
-                  cursor: "pointer",
-                  fontWeight: currentPage === page ? "700" : "500",
-                  minWidth: "40px",
-                  transition: "all 0.2s ease"
-                }}
               >
                 {page}
               </button>
             ))}
           </div>
-
           <button
+            className="pagination-btn"
             onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
             disabled={currentPage === totalPages}
-            style={{
-              padding: "0.5rem 1rem",
-              border: "2px solid var(--terracotta)",
-              borderRadius: "8px",
-              background: currentPage === totalPages ? "#f5f5f5" : "white",
-              color: currentPage === totalPages ? "#999" : "var(--terracotta)",
-              cursor: currentPage === totalPages ? "not-allowed" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              fontWeight: "600",
-              transition: "all 0.2s ease"
-            }}
           >
-            Siguiente
+            <span>Siguiente</span>
             <ChevronRight size={18} />
           </button>
-
-          <div style={{
-            marginLeft: "1rem",
-            color: "var(--stone-gray)",
-            fontSize: "0.9rem"
-          }}>
-            Mostrando {startIndex + 1} - {Math.min(endIndex, caballos.length)} de {caballos.length}
+          <div className="pagination-info">
+            Mostrando {startIndex + 1} - {Math.min(endIndex, filteredCaballos.length)} de {filteredCaballos.length}
           </div>
         </div>
       )}

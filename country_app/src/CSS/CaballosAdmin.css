@@ -1,0 +1,350 @@
+/* ====== CaballosAdmin ====== */
+
+@keyframes caSlideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Header */
+.caballos-admin-container .ca-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  background: #fff;
+  padding: 1.4rem 1.75rem;
+  border-radius: 16px;
+  border: 1px solid rgba(107, 68, 35, 0.08);
+  box-shadow: 0 4px 18px rgba(107, 68, 35, 0.08);
+  gap: 1rem;
+  flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.caballos-admin-container .ca-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--sage-green) 0%, var(--terracotta) 50%, var(--primary-brown) 100%);
+}
+
+.caballos-admin-container .ca-title {
+  font-weight: 700;
+  color: var(--primary-brown);
+  font-family: var(--font-primary);
+  letter-spacing: -0.01em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.caballos-admin-container .ca-desc {
+  color: var(--secondary-brown);
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+.caballos-admin-container .ca-btn-nuevo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: linear-gradient(135deg, #c17b4a 0%, #6b4423 100%);
+  color: #fff;
+  padding: 0.8rem 1.4rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(193, 123, 74, 0.25);
+  transition: all .2s ease;
+}
+
+.caballos-admin-container .ca-btn-nuevo:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+/* Lista (card) */
+.caballos-admin-container .ca-lista {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(107, 68, 35, 0.07);
+  border: 1px solid rgba(107, 68, 35, 0.08);
+  margin-bottom: 1.5rem;
+}
+
+/* Filtros integrados */
+.caballos-admin-container .ca-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(107, 68, 35, 0.08);
+  background: #faf8f5;
+}
+
+.caballos-admin-container .ca-search-wrap {
+  position: relative;
+  flex: 1 1 220px;
+  max-width: 300px;
+}
+
+.caballos-admin-container .ca-search-icon {
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--stone-gray);
+}
+
+.caballos-admin-container .ca-search-input {
+  width: 100%;
+  padding: 0.45rem 0.7rem 0.45rem 2rem;
+  border: 1.5px solid rgba(107, 68, 35, 0.15);
+  border-radius: 7px;
+  font-size: 0.82rem;
+  background: white;
+  color: var(--dark-brown);
+  box-sizing: border-box;
+}
+
+.caballos-admin-container .ca-search-input:focus {
+  outline: none;
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(193, 123, 74, 0.08);
+}
+
+.caballos-admin-container .ca-filter-select {
+  padding: 0.45rem 1.8rem 0.45rem 0.7rem;
+  border: 1.5px solid rgba(107, 68, 35, 0.15);
+  border-radius: 7px;
+  font-size: 0.82rem;
+  background: white;
+  color: var(--dark-brown);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%23b8b4a9' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+}
+
+.caballos-admin-container .ca-filter-select:focus {
+  outline: none;
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(193, 123, 74, 0.08);
+}
+
+/* Resumen */
+.caballos-admin-container .ca-summary {
+  margin: 0;
+  padding: 0.5rem 1.5rem 0.6rem;
+  font-size: 0.82rem;
+  color: var(--secondary-brown);
+  border-bottom: 1px solid rgba(107, 68, 35, 0.08);
+}
+
+.caballos-admin-container .ca-summary-hint {
+  font-style: italic;
+  opacity: 0.6;
+}
+
+/* Tabla */
+.caballos-admin-container .ca-table-wrap {
+  overflow-x: auto;
+}
+
+.caballos-admin-container .ca-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.caballos-admin-container .ca-table thead tr {
+  border-bottom: 1px solid rgba(107, 68, 35, 0.08);
+}
+
+.caballos-admin-container .ca-table th {
+  text-align: left;
+  padding: 0.75rem 1.25rem;
+  color: var(--secondary-brown);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.caballos-admin-container .ca-th-acciones {
+  text-align: center;
+  width: 60px;
+}
+
+.caballos-admin-container .ca-empty-cell {
+  text-align: center;
+  padding: 4rem;
+  color: var(--stone-gray);
+}
+
+.caballos-admin-container .ca-empty-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.caballos-admin-container .ca-row {
+  border-bottom: 1px solid rgba(107, 68, 35, 0.06);
+  transition: background-color 0.15s;
+}
+
+.caballos-admin-container .ca-row:hover {
+  background-color: #faf8f5;
+}
+
+.caballos-admin-container .ca-td {
+  padding: 0.85rem 1.25rem;
+  font-size: 0.88rem;
+  color: var(--charcoal);
+  vertical-align: middle;
+}
+
+.caballos-admin-container .ca-td-nombre {
+  font-weight: 600;
+  color: var(--dark-brown);
+  white-space: nowrap;
+}
+
+.caballos-admin-container .ca-td-muted {
+  color: var(--stone-gray);
+}
+
+.caballos-admin-container .ca-td-desc {
+  max-width: 260px;
+  color: var(--charcoal);
+}
+
+.caballos-admin-container .ca-sin {
+  font-style: italic;
+  color: var(--stone-gray);
+}
+
+/* Especialidades */
+.caballos-admin-container .ca-esp-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.caballos-admin-container .ca-esp-badge {
+  background-color: rgba(156, 175, 136, 0.15);
+  color: #5a7a44;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+/* Select de estado en fila */
+.caballos-admin-container .ca-status-select {
+  padding: 0.4rem 0.6rem;
+  border: 1.5px solid;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  background: white;
+}
+
+.caballos-admin-container .ca-status-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(193, 123, 74, 0.08);
+}
+
+/* Menú de acciones */
+.caballos-admin-container .ca-td-acciones {
+  padding: 0.85rem 1.25rem;
+  text-align: center;
+}
+
+.caballos-admin-container .ca-menu-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.caballos-admin-container .ca-menu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid rgba(107, 68, 35, 0.15);
+  border-radius: 8px;
+  background: white;
+  color: var(--secondary-brown);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.caballos-admin-container .ca-menu-trigger:hover {
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+}
+
+.caballos-admin-container .ca-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 100;
+  background: white;
+  border: 1px solid rgba(107, 68, 35, 0.08);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(107, 68, 35, 0.12);
+  min-width: 180px;
+  padding: 4px;
+  animation: caSlideDown 0.12s ease-out;
+}
+
+.caballos-admin-container .ca-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  cursor: pointer;
+  color: var(--dark-brown);
+  font-size: 0.84rem;
+  font-weight: 500;
+  text-align: left;
+}
+
+.caballos-admin-container .ca-menu-item:hover {
+  background: #faf8f5;
+}
+
+.caballos-admin-container .ca-menu-item.is-danger {
+  color: #c0392b;
+}
+
+.caballos-admin-container .ca-menu-item.is-danger:hover {
+  background: rgba(192, 57, 43, 0.08);
+}
+
+.caballos-admin-container .ca-menu-item-icon-edit {
+  color: var(--terracotta);
+}
+
+.caballos-admin-container .ca-menu-divider {
+  height: 1px;
+  background: rgba(107, 68, 35, 0.08);
+  margin: 3px 8px;
+}

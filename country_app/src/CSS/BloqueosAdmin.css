@@ -1,0 +1,509 @@
+/* ====== BloqueosAdmin ====== */
+
+@keyframes bloqueosSlideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.bloqueos-admin {
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Header */
+.bloqueos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  background: #fff;
+  padding: 1.4rem 1.75rem;
+  border-radius: 16px;
+  border: 1px solid rgba(107, 68, 35, 0.08);
+  box-shadow: 0 4px 18px rgba(107, 68, 35, 0.08);
+  gap: 1rem;
+  flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.bloqueos-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--sage-green) 0%, var(--terracotta) 50%, var(--primary-brown) 100%);
+}
+
+.bloqueos-title {
+  font-weight: 700;
+  color: var(--primary-brown);
+  font-family: var(--font-primary);
+  letter-spacing: -0.01em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bloqueos-desc {
+  color: var(--secondary-brown);
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+.bloqueos-btn-nuevo {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: linear-gradient(135deg, #c17b4a 0%, #6b4423 100%);
+  color: #fff;
+  padding: 0.8rem 1.4rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(193, 123, 74, 0.25);
+  transition: all .2s ease;
+}
+
+.bloqueos-btn-nuevo:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.bloqueos-btn-nuevo.is-active {
+  background: #c0392b;
+}
+
+/* Form */
+.bloqueos-form-card {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(107, 68, 35, 0.07);
+  margin-bottom: 2.5rem;
+  border: 1px solid rgba(107, 68, 35, 0.08);
+  animation: bloqueosSlideDown 0.3s ease-out;
+}
+
+.bloqueos-form-title {
+  margin-bottom: 1.5rem;
+  color: var(--dark-brown);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bloqueos-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+}
+
+.bloqueos-field-full {
+  grid-column: 1 / -1;
+}
+
+.bloqueos-label {
+  display: block;
+  margin-bottom: 0.6rem;
+  font-weight: 600;
+  color: var(--secondary-brown);
+  font-size: 0.9rem;
+}
+
+.bloqueos-label-icon {
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+.bloqueos-input,
+.bloqueos-select {
+  width: 100%;
+  padding: 0.8rem;
+  border-radius: 8px;
+  border: 2px solid rgba(107, 68, 35, 0.15);
+  outline: none;
+  box-sizing: border-box;
+  background: #fff;
+  color: var(--dark-brown);
+}
+
+.bloqueos-input:focus,
+.bloqueos-select:focus {
+  outline: none;
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(193, 123, 74, 0.08);
+}
+
+/* Clases */
+.bloqueos-clases {
+  margin-top: 1.5rem;
+}
+
+.bloqueos-todas {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  background-color: #faf8f5;
+  border: 2px solid rgba(107, 68, 35, 0.15);
+  cursor: pointer;
+  margin-bottom: 0.6rem;
+  font-weight: 600;
+  color: var(--dark-brown);
+}
+
+.bloqueos-todas.is-checked {
+  background-color: #fff7ee;
+  border-color: var(--terracotta);
+}
+
+.bloqueos-clases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.5rem;
+}
+
+.bloqueos-clases-grid.is-disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.bloqueos-clase-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 8px;
+  background-color: #faf8f5;
+  border: 2px solid rgba(107, 68, 35, 0.15);
+  cursor: pointer;
+  text-transform: capitalize;
+  font-size: 0.9rem;
+  color: var(--dark-brown);
+}
+
+.bloqueos-clase-item.is-checked {
+  background-color: #fff7ee;
+  border-color: #c17b4a;
+}
+
+/* Form actions */
+.bloqueos-form-actions {
+  margin-top: 2.5rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.bloqueos-btn-submit {
+  flex: 1;
+  background: linear-gradient(135deg, #c17b4a 0%, #6b4423 100%);
+  color: #fff;
+  padding: 1rem;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(193, 123, 74, 0.25);
+  transition: transform 0.1s alternate;
+}
+
+.bloqueos-btn-submit:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+/* Lista (card) */
+.bloqueos-lista {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(107, 68, 35, 0.07);
+  border: 1px solid rgba(107, 68, 35, 0.08);
+}
+
+.bloqueos-lista tr:hover {
+  background-color: #faf8f5;
+}
+
+/* Filtros integrados */
+.bloqueos-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(107, 68, 35, 0.08);
+  background: #faf8f5;
+}
+
+.bloqueos-search-wrap {
+  position: relative;
+  flex: 1 1 200px;
+  max-width: 280px;
+}
+
+.bloqueos-search-icon {
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--stone-gray);
+}
+
+.bloqueos-search-input {
+  width: 100%;
+  padding: 0.45rem 0.7rem 0.45rem 2rem;
+  border: 1.5px solid rgba(107, 68, 35, 0.15);
+  border-radius: 7px;
+  font-size: 0.82rem;
+  background: white;
+  color: var(--dark-brown);
+  box-sizing: border-box;
+}
+
+.bloqueos-search-input:focus {
+  outline: none;
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(193, 123, 74, 0.08);
+}
+
+.bloqueos-filter-select {
+  padding: 0.45rem 1.8rem 0.45rem 0.7rem;
+  border: 1.5px solid rgba(107, 68, 35, 0.15);
+  border-radius: 7px;
+  font-size: 0.82rem;
+  background: white;
+  color: var(--dark-brown);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%23b8b4a9' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+}
+
+.bloqueos-filter-select:focus {
+  outline: none;
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(193, 123, 74, 0.08);
+}
+
+/* Resumen */
+.bloqueos-summary {
+  margin: 0;
+  padding: 0.5rem 1.5rem 0.6rem;
+  font-size: 0.82rem;
+  color: var(--secondary-brown);
+  border-bottom: 1px solid rgba(107, 68, 35, 0.08);
+}
+
+.bloqueos-summary-hint {
+  font-style: italic;
+  opacity: 0.6;
+}
+
+/* Tabla */
+.bloqueos-table-wrap {
+  overflow-x: auto;
+}
+
+.bloqueos-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bloqueos-table thead tr {
+  border-bottom: 1px solid rgba(107, 68, 35, 0.08);
+}
+
+.bloqueos-table th {
+  text-align: left;
+  padding: 0.75rem 1.5rem;
+  color: var(--secondary-brown);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+
+.bloqueos-th-acciones {
+  text-align: center;
+  width: 60px;
+}
+
+.bloqueos-empty-cell {
+  text-align: center;
+  padding: 4rem;
+  color: var(--stone-gray);
+}
+
+.bloqueos-empty-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bloqueos-row {
+  border-bottom: 1px solid rgba(107, 68, 35, 0.06);
+  transition: background-color 0.15s;
+}
+
+.bloqueos-row.is-past {
+  opacity: 0.45;
+}
+
+.bloqueos-td {
+  padding: 1rem 1.5rem;
+  color: var(--charcoal);
+}
+
+.bloqueos-fecha {
+  color: var(--dark-brown);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 500;
+  font-size: 0.85rem;
+}
+
+.bloqueos-fecha-icon {
+  opacity: 0.5;
+}
+
+.bloqueos-fecha-past-tag {
+  font-size: 0.68rem;
+  color: #c17b4a;
+  font-weight: 500;
+}
+
+.bloqueos-td-clase {
+  text-transform: capitalize;
+}
+
+.bloqueos-clase-badge {
+  background-color: rgba(193, 123, 74, 0.08);
+  color: var(--primary-brown);
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.bloqueos-td-motivo {
+  color: var(--secondary-brown);
+}
+
+.bloqueos-todas-tag {
+  color: var(--secondary-brown);
+  font-style: italic;
+}
+
+.bloqueos-motivo-vacio {
+  color: var(--stone-gray);
+}
+
+/* Badge de turno */
+.bloqueos-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+}
+
+.bloqueos-badge.is-manana {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.bloqueos-badge.is-tarde {
+  background-color: rgba(107, 68, 35, 0.1);
+  color: var(--secondary-brown);
+}
+
+/* Menú de acciones */
+.bloqueos-td-acciones {
+  padding: 1rem 1.5rem;
+  text-align: center;
+}
+
+.bloqueos-menu-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.bloqueos-menu-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid rgba(107, 68, 35, 0.15);
+  border-radius: 8px;
+  background: white;
+  color: var(--secondary-brown);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.bloqueos-menu-trigger:hover {
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+}
+
+.bloqueos-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 100;
+  background: white;
+  border: 1px solid rgba(107, 68, 35, 0.08);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(107, 68, 35, 0.12);
+  min-width: 180px;
+  padding: 4px;
+  animation: bloqueosSlideDown 0.12s ease-out;
+}
+
+.bloqueos-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  cursor: pointer;
+  color: var(--dark-brown);
+  font-size: 0.84rem;
+  font-weight: 500;
+  text-align: left;
+}
+
+.bloqueos-menu-item:hover {
+  background: #faf8f5;
+}
+
+.bloqueos-menu-item.is-danger {
+  color: #c0392b;
+}
+
+.bloqueos-menu-item.is-danger:hover {
+  background: rgba(192, 57, 43, 0.08);
+}

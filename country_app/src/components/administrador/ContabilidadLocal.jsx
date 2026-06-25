@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react"
 import ReactDOM from "react-dom"
 import "../../CSS/Contabilidad.css"
+import "../../CSS/ContabilidadLocal.css"
 import LogoutButton from '../LogoutBoton'
 import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit } from "lucide-react"
 import useRoleGuard from '../../hooks/useRoleGuard';
@@ -57,6 +58,13 @@ const MembershipAdminDashboardLocal = () => {
     if (!status) return "Activo"
     return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()
   }
+
+  // Clase modificadora de color para el badge de estado
+  const statusClass = (status) =>
+    status === "Activo" ? "is-activo"
+      : status === "Inactivo" ? "is-inactivo"
+        : status === "Pendiente" ? "is-pendiente"
+          : "is-bloqueado"
 
   // Función para obtener icono y estilo de alerta de pago
   const getPaymentAlert = (memberId) => {
@@ -699,22 +707,22 @@ const MembershipAdminDashboardLocal = () => {
       {/* ESTADÍSTICAS */}
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-card-topline" style={{ backgroundColor: "#c17b4a" }}></div>
+          <div className="stat-card-topline cl-topline-total"></div>
           <div className="stat-title">Usuarios Totales</div>
           <div className="stat-value">{totalUsers}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-card-topline" style={{ backgroundColor: "#9caf88" }}></div>
+          <div className="stat-card-topline cl-topline-active"></div>
           <div className="stat-title">Activos</div>
           <div className="stat-value">{activeUsers}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-card-topline" style={{ backgroundColor: "#8b5a2b" }}></div>
+          <div className="stat-card-topline cl-topline-blocked"></div>
           <div className="stat-title">Bloqueados</div>
           <div className="stat-value">{blockedUsers}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-card-topline" style={{ backgroundColor: "#d4a574" }}></div>
+          <div className="stat-card-topline cl-topline-pending"></div>
           <div className="stat-title">Pendientes</div>
           <div className="stat-value">{pendingUsers}</div>
         </div>
@@ -758,28 +766,14 @@ const MembershipAdminDashboardLocal = () => {
 
       {/* TABLA */}
       {loading ? (
-        <div
-          style={{
-            textAlign: "center",
-            padding: "4rem 2rem",
-            background: "rgba(255, 255, 255, 0.9)",
-            borderRadius: "16px",
-            boxShadow: "0 4px 20px rgba(107,68,35,0.06)",
-          }}
-        >
-          <Loader size={40} className="spin" style={{ color: "var(--terracotta)", marginBottom: "1rem" }} />
-          <div
-            style={{
-              color: "var(--primary-brown)",
-              fontSize: "1.1rem",
-              fontWeight: "600",
-            }}
-          >
+        <div className="cl-loading-box">
+          <Loader size={40} className="spin cl-loading-icon" />
+          <div className="cl-loading-text">
             Cargando usuarios...
           </div>
         </div>
       ) : (
-        <div style={{ overflow: "hidden", borderRadius: "16px" }}>
+        <div className="cl-table-wrap">
           <table className="members-table">
             <thead>
               <tr>
@@ -795,16 +789,7 @@ const MembershipAdminDashboardLocal = () => {
             <tbody>
               {filteredMembers.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={7}
-                    style={{
-                      textAlign: "center",
-                      padding: "3rem",
-                      color: "var(--terracotta)",
-                      fontSize: "1.1rem",
-                      fontWeight: "600",
-                    }}
-                  >
+                  <td colSpan={7} className="cl-empty-cell">
                     {searchTerm || statusFilter
                       ? "No se encontraron usuarios con los filtros aplicados."
                       : "No hay usuarios con rol de cliente."}
@@ -817,32 +802,19 @@ const MembershipAdminDashboardLocal = () => {
 
                   return (
                     <tr key={member.id}>
-                      <td style={{ fontWeight: "600" }}>{member.name}</td>
+                      <td className="cl-name-cell">{member.name}</td>
                       <td>
                         {member.email ? (
-                          <span style={{ color: "var(--stone-gray)" }}>{member.email}</span>
+                          <span className="cl-email">{member.email}</span>
                         ) : (
-                          <span
-                            style={{
-                              color: "#dc3545",
-                              fontWeight: "bold",
-                              fontSize: "13px",
-                              fontStyle: "italic",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.5px",
-                              backgroundColor: "#f8d7da",
-                              padding: "4px 8px",
-                              borderRadius: "4px",
-                              display: "inline-block",
-                            }}
-                          >
+                          <span className="cl-no-email">
                             Sin correo registrado
                           </span>
                         )}
                       </td>
                       <td>
                         <select
-                          className="status-badge"
+                          className={`status-badge ${statusClass(displayStatus)}`}
                           value={member.status}
                           onChange={async (e) => {
                             const newStatus = e.target.value
@@ -868,24 +840,6 @@ const MembershipAdminDashboardLocal = () => {
                               showNotification("Error de conexión. Inténtalo de nuevo.", "error")
                             }
                           }}
-                          style={{
-                            borderColor:
-                              displayStatus === "Activo"
-                                ? "#9caf88"
-                                : displayStatus === "Inactivo"
-                                  ? "#c17b4a"
-                                  : displayStatus === "Pendiente"
-                                    ? "#d4a574"
-                                    : "#8b5a2b",
-                            color:
-                              displayStatus === "Activo"
-                                ? "#9caf88"
-                                : displayStatus === "Inactivo"
-                                  ? "#c17b4a"
-                                  : displayStatus === "Pendiente"
-                                    ? "#d4a574"
-                                    : "#8b5a2b",
-                          }}
                         >
                           <option value="Activo">Activo</option>
                           <option value="Inactivo">Inactivo</option>
@@ -893,27 +847,16 @@ const MembershipAdminDashboardLocal = () => {
                           <option value="Pendiente">Pendiente</option>
                         </select>
                       </td>
-                      <td style={{ fontWeight: "600", color: "var(--primary-brown)" }}>${formatCurrency(member.monthlyFee)}</td>
+                      <td className="cl-fee-cell">${formatCurrency(member.monthlyFee)}</td>
                       <td>{formatDate(member.lastPaymentDate)}</td>
-                      <td
-                        style={{
-                          color: expired ? "#8b5a2b" : "var(--charcoal)",
-                          fontWeight: expired ? "600" : "500",
-                        }}
-                      >
+                      <td className={`cl-next-cell${expired ? " is-expired" : ""}`}>
                         {formatDate(member.proximaFecha) || "-"}
                       </td>
                       <td>
                         <button
-                          className="btn history-btn"
+                          className="btn history-btn cl-history-btn"
                           onClick={() => openPaymentHistoryModal(member)}
                           type="button"
-                          style={{
-                            background: "linear-gradient(135deg, var(--terracotta), var(--primary-brown))",
-                            color: "white",
-                            border: "none",
-                            position: "relative",
-                          }}
                         >
                           <History size={16} /> Historial
                           {paymentCounts[member.id] && paymentCounts[member.id] > 0 && (
@@ -1014,7 +957,7 @@ const MembershipAdminDashboardLocal = () => {
 
               <div className="modal-section">
                 <h3>Información Personal</h3>
-                <div style={{background: 'rgba(139, 111, 78, 0.1)', border: '1px solid rgba(139, 111, 78, 0.3)', borderRadius: '8px', padding: '12px', margin: '10px 0 20px 0', fontSize: '14px', color: '#8b6f4e'}}>
+                <div className="cl-info-box">
                   🔑 <strong>Credenciales automáticas:</strong> El username y contraseña se generarán automáticamente y se enviarán por email al cliente.
                 </div>
                 <div className="modal-field">
@@ -1048,8 +991,8 @@ const MembershipAdminDashboardLocal = () => {
                     data-form-type="other"
                   />
                 </div>
-                <div className="modal-field" style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                  <label style={{color: withoutEmail ? '#999' : 'inherit'}}>
+                <div className="modal-field cl-field-col">
+                  <label className={`cl-email-label${withoutEmail ? ' is-disabled' : ''}`}>
                     Email {!withoutEmail && '*'}:
                   </label>
                   <input
@@ -1063,50 +1006,28 @@ const MembershipAdminDashboardLocal = () => {
                     data-lpignore="true"
                     data-form-type="other"
                     disabled={withoutEmail}
-                    style={{
-                      border: '1px solid #ced4da',
-                      borderRadius: '4px',
-                      padding: '8px 12px',
-                      backgroundColor: withoutEmail ? '#f5f5f5' : 'white',
-                      color: withoutEmail ? '#999' : 'inherit',
-                      cursor: withoutEmail ? 'not-allowed' : 'text'
-                    }}
+                    className="cl-email-input"
                   />
-                  <label style={{
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    gap: '8px', 
-                    cursor: 'pointer', 
-                    fontSize: '14px', 
-                    fontWeight: '500', 
-                    color: '#495057',
-                    marginTop: '4px'
-                  }} onClick={() => setWithoutEmail(!withoutEmail)}>
+                  <label className="cl-checkbox-label" onClick={() => setWithoutEmail(!withoutEmail)}>
                     <input
                       type="checkbox"
                       checked={withoutEmail}
                       onChange={(e) => setWithoutEmail(e.target.checked)}
-                      style={{width: '16px', height: '16px'}}
+                      className="cl-checkbox-input"
                     />
                     Usuario sin correo electrónico
                   </label>
                   {withoutEmail && (
-                    <div style={{fontSize: '12px', color: '#666', marginTop: '4px'}}>
+                    <div className="cl-hint">
                       Las credenciales se mostrarán para distribución manual
                     </div>
                   )}
                 </div>
 
                 {withoutEmail && previewCredentials.username && (
-                  <div style={{
-                    background: userCreatedSuccessfully ? '#d4edda' : '#fff3cd', 
-                    border: `1px solid ${userCreatedSuccessfully ? '#c3e6cb' : '#ffeaa7'}`, 
-                    borderRadius: '6px', 
-                    padding: '15px', 
-                    marginBottom: '15px'
-                  }}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px'}}>
-                      <h4 style={{margin: 0, color: userCreatedSuccessfully ? '#155724' : '#856404', fontSize: '14px'}}>
+                  <div className={`cl-cred-box${userCreatedSuccessfully ? ' is-created' : ''}`}>
+                    <div className="cl-cred-header">
+                      <h4 className={`cl-cred-title${userCreatedSuccessfully ? ' is-created' : ''}`}>
                         {userCreatedSuccessfully ? '🎉 ¡Usuario creado exitosamente!' : '⚠️ Credenciales a crear:'}
                       </h4>
                       <button
@@ -1141,73 +1062,37 @@ const MembershipAdminDashboardLocal = () => {
                             }
                           }
                         }}
-                        style={{
-                          padding: '6px 12px',
-                          backgroundColor: userCreatedSuccessfully ? '#28a745' : '#f0ad4e',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '12px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
+                        className={`cl-copy-btn${userCreatedSuccessfully ? ' is-created' : ''}`}
                         title="Copiar ambas credenciales"
                       >
                         📋 Copiar todo
                       </button>
                     </div>
-                    
+
                     {copyMessage && (
-                      <div style={{
-                        background: '#d4edda',
-                        color: '#155724',
-                        border: '1px solid #c3e6cb',
-                        borderRadius: '4px',
-                        padding: '8px',
-                        marginBottom: '10px',
-                        fontSize: '12px',
-                        textAlign: 'center'
-                      }}>
+                      <div className="cl-copy-msg">
                         ✅ {copyMessage}
                       </div>
                     )}
 
                     {!userCreatedSuccessfully && (
-                      <div style={{
-                        background: '#fcf8e3',
-                        color: '#8a6d3b',
-                        border: '1px solid #faebcc',
-                        borderRadius: '4px',
-                        padding: '10px',
-                        marginBottom: '12px',
-                        fontSize: '13px',
-                        fontWeight: '500'
-                      }}>
+                      <div className="cl-reco">
                         💡 <strong>RECOMENDACIÓN:</strong> Copia estas credenciales ANTES de crear la cuenta. Una vez creada, el modal se cerrará automáticamente.
                       </div>
                     )}
-                    
-                    <div style={{marginBottom: '10px'}}>
-                      <label style={{fontSize: '12px', color: '#6c757d', fontWeight: 'bold'}}>Username:</label>
-                      <div style={{
-                        background: 'white', 
-                        border: '1px solid #ced4da', 
-                        borderRadius: '4px', 
-                        padding: '8px', 
-                        fontFamily: 'monospace', 
-                        fontSize: '14px'
-                      }}>
+
+                    <div className="cl-cred-group">
+                      <label className="cl-cred-label">Username:</label>
+                      <div className="cl-cred-value">
                         {previewCredentials.username}
                       </div>
                     </div>
-                    
+
                     <div>
-                      <label style={{fontSize: '12px', color: '#6c757d', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '4px'}}>
+                      <label className="cl-cred-label-row">
                         Contraseña:
                         {!userCreatedSuccessfully && (
-                          <span style={{fontSize: '11px', color: '#8b6f4e', fontWeight: 'normal'}}>✏️ (editable)</span>
+                          <span className="cl-editable-tag">✏️ (editable)</span>
                         )}
                       </label>
                       <input
@@ -1215,31 +1100,22 @@ const MembershipAdminDashboardLocal = () => {
                         value={previewCredentials.password}
                         onChange={(e) => !userCreatedSuccessfully && setPreviewCredentials({...previewCredentials, password: e.target.value})}
                         disabled={userCreatedSuccessfully}
-                        style={{
-                          width: '100%',
-                          border: `2px solid ${
-                            userCreatedSuccessfully 
-                              ? '#28a745' 
-                              : previewCredentials.password.length > 0 && previewCredentials.password.length < 5
-                                ? '#dc3545'
-                                : '#8b6f4e'
-                          }`, 
-                          borderRadius: '4px', 
-                          padding: '8px', 
-                          fontFamily: 'monospace', 
-                          fontSize: '14px',
-                          backgroundColor: userCreatedSuccessfully ? '#f8fff9' : '#fafafa',
-                          cursor: userCreatedSuccessfully ? 'default' : 'text'
-                        }}
+                        className={`cl-pass-input ${
+                          userCreatedSuccessfully
+                            ? 'is-created'
+                            : previewCredentials.password.length > 0 && previewCredentials.password.length < 5
+                              ? 'is-invalid'
+                              : ''
+                        }`}
                         placeholder={userCreatedSuccessfully ? "Contraseña final" : "Mínimo 5 caracteres"}
                       />
                       {!userCreatedSuccessfully && previewCredentials.password.length > 0 && previewCredentials.password.length < 5 && (
-                        <div style={{ fontSize: '11px', color: '#dc3545', marginTop: '4px', fontWeight: '500' }}>
+                        <div className="cl-pass-error">
                           ⚠️ Contraseña muy corta ({previewCredentials.password.length}/5 caracteres)
                         </div>
                       )}
                       {!userCreatedSuccessfully && previewCredentials.password.length >= 5 && (
-                        <div style={{ fontSize: '11px', color: '#28a745', marginTop: '4px', fontWeight: '500' }}>
+                        <div className="cl-pass-ok">
                           ✓ Contraseña válida ({previewCredentials.password.length} caracteres)
                         </div>
                       )}
@@ -1333,7 +1209,7 @@ const MembershipAdminDashboardLocal = () => {
               <div className="modal-section">
                 <h3>Pagos Realizados</h3>
                 {paymentHistory.length === 0 ? (
-                  <p style={{ color: "var(--stone-gray)", fontStyle: "italic" }}>
+                  <p className="cl-history-empty">
                     No hay pagos registrados
                   </p>
                 ) : (

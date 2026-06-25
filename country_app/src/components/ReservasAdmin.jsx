@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import useAutoRefresh from '../hooks/useAutoRefresh';
-import { Loader, Calendar, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Loader, ChevronLeft, ChevronRight, Search, CalendarDays } from "lucide-react";
+import "../CSS/ReservasAdmin.css";
 
 const ReservasAdmin = () => {
   const [reservas, setReservas] = useState([]);
@@ -132,108 +133,6 @@ const ReservasAdmin = () => {
   const refreshReservas = useCallback(() => loadReservas(true), [filtroTiempo, fechaSeleccionada, mesSeleccionado, fechaInicio, fechaFin]);
   useAutoRefresh(refreshReservas, { interval: 30000 });
 
-  // Implementar sticky header para la tabla de reservas (clon + sincronización de anchos)
-  useEffect(() => {
-    let stickyHeader = null
-    const containerSelector = '.reservas-admin-container .table-container'
-    const container = document.querySelector(containerSelector)
-    if (!container) return
-
-    const table = container.querySelector('.members-table')
-    if (!table) return
-    const thead = table.querySelector('thead')
-
-    const calculateHeaderPosition = () => {
-      const tableRect = table.getBoundingClientRect()
-      const theadRect = thead.getBoundingClientRect()
-      return { tableRect, theadRect }
-    }
-
-    const handleScroll = () => {
-      const { tableRect, theadRect } = calculateHeaderPosition()
-
-      if (theadRect.top <= 0 && tableRect.bottom > 100) {
-        if (!stickyHeader) {
-          stickyHeader = thead.cloneNode(true)
-          stickyHeader.style.position = 'fixed'
-          stickyHeader.style.top = '0'
-          stickyHeader.style.zIndex = '999'
-          stickyHeader.style.pointerEvents = 'none' // nunca bloquear clics aunque quede colgado
-          stickyHeader.classList.add('sticky-clone')
-          stickyHeader.style.display = 'table'
-
-          // copiar anchos iniciales
-          const originalThs = thead.querySelectorAll('th')
-          const clonedThs = stickyHeader.querySelectorAll('th')
-          originalThs.forEach((th, index) => {
-            if (clonedThs[index]) {
-              const w = th.getBoundingClientRect().width
-              clonedThs[index].style.width = `${Math.round(w)}px`
-            }
-          })
-
-          document.body.appendChild(stickyHeader)
-        }
-
-        if (stickyHeader) {
-          const rect = table.getBoundingClientRect()
-          stickyHeader.style.left = `${Math.round(rect.left)}px`
-          stickyHeader.style.width = `${Math.round(rect.width)}px`
-          stickyHeader.style.display = 'table-header-group'
-
-          // actualizar anchos
-          const originalThs2 = thead.querySelectorAll('th')
-          const clonedThs2 = stickyHeader.querySelectorAll('th')
-          originalThs2.forEach((th, index) => {
-            if (clonedThs2[index]) {
-              const w = th.getBoundingClientRect().width
-              clonedThs2[index].style.width = `${Math.round(w)}px`
-            }
-          })
-          // sincronizar horizontal
-          handleTableScroll()
-        }
-      } else {
-        if (stickyHeader) {
-          stickyHeader.remove()
-          stickyHeader = null
-        }
-      }
-    }
-
-    const handleTableScroll = () => {
-      if (!stickyHeader) return
-      const rect = table.getBoundingClientRect()
-      // actualizar anchos
-      const originalThs = thead.querySelectorAll('th')
-      const clonedThs = stickyHeader.querySelectorAll('th')
-      originalThs.forEach((th, index) => {
-        if (clonedThs[index]) {
-          const w = th.getBoundingClientRect().width
-          clonedThs[index].style.width = `${Math.round(w)}px`
-        }
-      })
-      // ajustar posicion
-      stickyHeader.style.left = `${Math.round(rect.left)}px`
-      stickyHeader.style.width = `${Math.round(rect.width)}px`
-    }
-
-    const initTimeout = setTimeout(() => {
-      handleScroll()
-      window.addEventListener('scroll', handleScroll)
-      window.addEventListener('resize', handleScroll)
-      container.addEventListener('scroll', handleTableScroll)
-    }, 100)
-
-    return () => {
-      clearTimeout(initTimeout)
-      window.removeEventListener('scroll', handleScroll)
-      window.removeEventListener('resize', handleScroll)
-      container.removeEventListener('scroll', handleTableScroll)
-      if (stickyHeader) stickyHeader.remove()
-    }
-  }, [loading, reservas])
-
   // Opciones de los filtros: listas COMPLETAS (todas las clases, instructores y caballos),
   // no solo lo que aparece en las reservas del periodo.
   const normalizarNombre = (n = "", a = "") => `${n} ${a}`.replace(/\s+/g, " ").trim();
@@ -279,16 +178,16 @@ const ReservasAdmin = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
-    
+
     // Extraer solo la parte de la fecha si viene en formato ISO (YYYY-MM-DDTHH:MM:SS.SSSZ)
     const fechaSolo = dateString.split('T')[0];
-    
+
     // Parsear la fecha en zona horaria local para evitar problemas de conversión UTC
     const [year, month, day] = fechaSolo.split('-').map(Number);
     const date = new Date(year, month - 1, day);
-    
+
     if (isNaN(date.getTime())) return "Invalid Date";
-    
+
     const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
     return date.toLocaleDateString('es-ES', options);
   };
@@ -312,31 +211,6 @@ const ReservasAdmin = () => {
       default:
         return { border: "#c17b4a", color: "#c17b4a" };
     }
-  };
-
-  const getAsistenciaBadgeColor = (asistencia) => {
-    switch(asistencia) {
-      case "presente":
-        return { border: "#9caf88", color: "#9caf88", text: "Asistió" };
-      case "ausente":
-        return { border: "#c17b4a", color: "#c17b4a", text: "Faltó" };
-      case "justificado":
-        return { border: "#d4a574", color: "#d4a574", text: "Justificado" };
-      default:
-        return { border: "#e0e0e0", color: "#999", text: "Pendiente" };
-    }
-  };
-
-  const formatNivel = (nivel) => {
-    if (!nivel) return "-";
-    const niveles = {
-      'paseo': 'Paseo',
-      'iniciacion': 'Iniciación',
-      'ponyclub': 'Ponyclub',
-      'intermedio': 'Intermedio',
-      'avanzado': 'Avanzado'
-    };
-    return niveles[nivel] || nivel;
   };
 
   const getRangoSemana = () => {
@@ -395,11 +269,16 @@ const ReservasAdmin = () => {
           {notification.message}
         </div>
       )}
-      
-      {/* Header con controles */}
-      <div className="controls-container enhanced-controls" style={{ marginBottom: "1.5rem" }}>
-        <div className="controls-inner">
-          <h2 style={{ margin: 0, color: "var(--primary-brown)" }}>Gestión de Reservas</h2>
+
+      {/* Header */}
+      <div className="ra-header">
+        <div>
+          <h2 className="ra-title">
+            <CalendarDays size={22} /> Gestión de Reservas
+          </h2>
+          <p className="ra-desc">
+            Consulta y administra las reservas por día, semana, mes o un rango personalizado.
+          </p>
         </div>
       </div>
 
@@ -434,168 +313,117 @@ const ReservasAdmin = () => {
         </div>
       )}
 
-      {/* Barra de busqueda y filtros */}
-      <div className="controls-bar">
-        <div className="controls-search">
-          <Search size={18} className="controls-search-icon" />
-          <input
-            type="text"
-            className="controls-search-input"
-            placeholder="Buscar por cliente, instructora o caballo..."
-            value={searchTerm}
-            onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-            autoComplete="off"
-          />
-        </div>
-        <div className="controls-filters">
-          <div className="controls-filter-item">
-            <label className="controls-filter-label">Periodo</label>
-            <div className="periodo-pills">
-              {[
-                { value: "dia", label: "Día" },
-                { value: "semana", label: "Semana" },
-                { value: "mes", label: "Mes" },
-                { value: "personalizado", label: "Personalizado" },
-              ].map(op => (
-                <button
-                  key={op.value}
-                  type="button"
-                  className={`periodo-pill${filtroTiempo === op.value ? " periodo-pill-active" : ""}`}
-                  onClick={() => setFiltroTiempo(op.value)}
-                >
-                  {op.label}
-                </button>
-              ))}
-            </div>
+      {/* Lista */}
+      <div className="ra-lista">
+        {/* Filtros integrados en la card */}
+        <div className="ra-filtros">
+          <div className="ra-search-wrap">
+            <Search size={14} className="ra-search-icon" />
+            <input
+              type="text"
+              className="ra-search-input"
+              placeholder="Buscar por cliente, instructora o caballo..."
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              autoComplete="off"
+            />
           </div>
+
+          <div className="ra-period-pills">
+            {[
+              { value: "dia", label: "Día" },
+              { value: "semana", label: "Semana" },
+              { value: "mes", label: "Mes" },
+              { value: "personalizado", label: "Personalizado" },
+            ].map(op => (
+              <button
+                key={op.value}
+                type="button"
+                className={`ra-pill${filtroTiempo === op.value ? " is-active" : ""}`}
+                onClick={() => setFiltroTiempo(op.value)}
+              >
+                {op.label}
+              </button>
+            ))}
+          </div>
+
           {(filtroTiempo === "dia" || filtroTiempo === "semana") && (
-            <div className="controls-filter-item">
-              <label className="controls-filter-label">Fecha</label>
-              <input
-                type="date"
-                className="controls-filter-select"
-                value={fechaSeleccionada}
-                onChange={(e) => setFechaSeleccionada(e.target.value)}
-                onClick={(e) => { e.preventDefault(); e.target.showPicker(); }}
-                style={{ minWidth: "140px", cursor: "pointer" }}
-              />
-            </div>
+            <input
+              type="date"
+              className="ra-date"
+              value={fechaSeleccionada}
+              onChange={(e) => setFechaSeleccionada(e.target.value)}
+              onClick={(e) => { e.preventDefault(); e.target.showPicker(); }}
+            />
           )}
           {filtroTiempo === "mes" && (
-            <div className="controls-filter-item">
-              <label className="controls-filter-label">Mes</label>
-              <input
-                type="month"
-                className="controls-filter-select"
-                value={mesSeleccionado}
-                onChange={(e) => setMesSeleccionado(e.target.value)}
-                onClick={(e) => { e.preventDefault(); e.target.showPicker(); }}
-                style={{ minWidth: "160px", cursor: "pointer" }}
-              />
-            </div>
+            <input
+              type="month"
+              className="ra-date"
+              value={mesSeleccionado}
+              onChange={(e) => setMesSeleccionado(e.target.value)}
+              onClick={(e) => { e.preventDefault(); e.target.showPicker(); }}
+            />
           )}
           {filtroTiempo === "personalizado" && (
             <>
-              <div className="controls-filter-item">
-                <label className="controls-filter-label">Desde</label>
-                <input
-                  type="date"
-                  className="controls-filter-select"
-                  value={fechaInicio}
-                  onChange={(e) => setFechaInicio(e.target.value)}
-                  onClick={(e) => { e.preventDefault(); e.target.showPicker(); }}
-                  style={{ minWidth: "140px", cursor: "pointer" }}
-                />
-              </div>
-              <div className="controls-filter-item">
-                <label className="controls-filter-label">Hasta</label>
-                <input
-                  type="date"
-                  className="controls-filter-select"
-                  value={fechaFin}
-                  onChange={(e) => setFechaFin(e.target.value)}
-                  onClick={(e) => { e.preventDefault(); e.target.showPicker(); }}
-                  style={{ minWidth: "140px", cursor: "pointer" }}
-                />
-              </div>
+              <input
+                type="date"
+                className="ra-date"
+                value={fechaInicio}
+                onChange={(e) => setFechaInicio(e.target.value)}
+                onClick={(e) => { e.preventDefault(); e.target.showPicker(); }}
+              />
+              <input
+                type="date"
+                className="ra-date"
+                value={fechaFin}
+                onChange={(e) => setFechaFin(e.target.value)}
+                onClick={(e) => { e.preventDefault(); e.target.showPicker(); }}
+              />
             </>
           )}
-          <div className="controls-filter-item">
-            <label className={`controls-filter-label ${estadoFilter ? "label-active" : ""}`}>Estado</label>
-            <select className={`controls-filter-select ${estadoFilter ? "filter-active" : ""}`} value={estadoFilter} onChange={(e) => { setEstadoFilter(e.target.value); setCurrentPage(1); }}>
-              <option value="">Todos</option>
-              <option value="pendiente">Pendiente</option>
-              <option value="confirmada">Confirmada</option>
-              <option value="completada">Completada</option>
-              <option value="cancelada">Cancelada</option>
-            </select>
-          </div>
-          <div className="controls-filter-item">
-            <label className={`controls-filter-label ${claseFilter ? "label-active" : ""}`}>Clase</label>
-            <select className={`controls-filter-select ${claseFilter ? "filter-active" : ""}`} value={claseFilter} onChange={(e) => { setClaseFilter(e.target.value); setCurrentPage(1); }}>
-              <option value="">Todas</option>
-              {clasesUnicas.map(c => (
-                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-              ))}
-            </select>
-          </div>
-          <div className="controls-filter-item">
-            <label className={`controls-filter-label ${instructorFilter ? "label-active" : ""}`}>Instructor</label>
-            <select className={`controls-filter-select ${instructorFilter ? "filter-active" : ""}`} value={instructorFilter} onChange={(e) => { setInstructorFilter(e.target.value); setCurrentPage(1); }}>
-              <option value="">Todos</option>
-              {instructoresUnicos.map(i => (
-                <option key={i} value={i}>{i}</option>
-              ))}
-            </select>
-          </div>
-          <div className="controls-filter-item">
-            <label className={`controls-filter-label ${caballoFilter ? "label-active" : ""}`}>Caballo</label>
-            <select className={`controls-filter-select ${caballoFilter ? "filter-active" : ""}`} value={caballoFilter} onChange={(e) => { setCaballoFilter(e.target.value); setCurrentPage(1); }}>
-              <option value="">Todos</option>
-              {caballosUnicos.map(cab => (
-                <option key={cab} value={cab}>{cab}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        {filtroTiempo === "semana" && (
-          <div style={{ fontSize: "0.8rem", color: "var(--secondary-brown)", fontWeight: "500" }}>
-            Semana: {getRangoSemana()}
-          </div>
-        )}
-        {filtroTiempo === "mes" && (
-          <div style={{ fontSize: "0.8rem", color: "var(--secondary-brown)", fontWeight: "500", textTransform: "capitalize" }}>
-            Mes: {getNombreMes()}
-          </div>
-        )}
-        {filtroTiempo === "personalizado" && (
-          <div style={{ fontSize: "0.8rem", color: "var(--secondary-brown)", fontWeight: "500" }}>
-            Rango: {formatDate(fechaInicio)} - {formatDate(fechaFin)}
-          </div>
-        )}
-      </div>
 
-      {/* Resumen de filtros */}
-      {!loading && (
-        <p style={{ margin: '0 0 0.6rem', fontSize: '0.84rem', color: 'var(--charcoal)', lineHeight: 1.5 }}>
+          <select className="ra-filter-select" value={estadoFilter} onChange={(e) => { setEstadoFilter(e.target.value); setCurrentPage(1); }}>
+            <option value="">Todos los estados</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="confirmada">Confirmada</option>
+            <option value="completada">Completada</option>
+            <option value="cancelada">Cancelada</option>
+          </select>
+          <select className="ra-filter-select" value={claseFilter} onChange={(e) => { setClaseFilter(e.target.value); setCurrentPage(1); }}>
+            <option value="">Todas las clases</option>
+            {clasesUnicas.map(c => (
+              <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
+            ))}
+          </select>
+          <select className="ra-filter-select" value={instructorFilter} onChange={(e) => { setInstructorFilter(e.target.value); setCurrentPage(1); }}>
+            <option value="">Todas las instructoras</option>
+            {instructoresUnicos.map(i => (
+              <option key={i} value={i}>{i}</option>
+            ))}
+          </select>
+          <select className="ra-filter-select" value={caballoFilter} onChange={(e) => { setCaballoFilter(e.target.value); setCurrentPage(1); }}>
+            <option value="">Todos los caballos</option>
+            {caballosUnicos.map(cab => (
+              <option key={cab} value={cab}>{cab}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Resumen de filtros */}
+        <p className="ra-summary">
           Mostrando <strong>{filteredReservas.length} reserva{filteredReservas.length !== 1 ? 's' : ''}</strong>
           {' · '}{estadoFilter ? estadoFilter.charAt(0).toUpperCase() + estadoFilter.slice(1) : 'Todos los estados'}
           {' · '}{getResumenRango()}
           {!estadoFilter && !searchTerm && (
-            <span style={{ fontStyle: 'italic', opacity: 0.6 }}> · Usa los filtros para ajustar la búsqueda</span>
+            <span className="ra-summary-hint"> · Usa los filtros para ajustar la búsqueda</span>
           )}
         </p>
-      )}
 
-      {/* Tabla de reservas */}
-      {loading ? (
-        <div className="loading-container">
-          <Loader size={40} className="spin loading-spinner" />
-          <div className="loading-text">Cargando reservas...</div>
-        </div>
-      ) : (
-        <div className="table-container">
-          <table className="members-table">
+        {/* Tabla de reservas */}
+        <div className="ra-table-wrap">
+          <table className="ra-table">
             <thead>
               <tr>
                 <th>Fecha</th>
@@ -610,84 +438,72 @@ const ReservasAdmin = () => {
               </tr>
             </thead>
             <tbody>
-              {currentReservas.length === 0 ? (
+              {loading ? (
                 <tr>
-                  <td colSpan={9} className="empty-state-cell">
-                    {searchTerm || estadoFilter || claseFilter || instructorFilter || caballoFilter
-                      ? "No se encontraron reservas con los filtros aplicados."
-                      : filtroTiempo === "dia"
-                        ? `No hay reservas para el ${formatDate(fechaSeleccionada)}`
-                        : filtroTiempo === "semana"
-                          ? "No hay reservas para la semana seleccionada"
-                          : filtroTiempo === "mes"
-                            ? `No hay reservas para ${getNombreMes()}`
-                            : "No hay reservas para el rango seleccionado"
-                    }
+                  <td colSpan={9} className="ra-empty-cell">
+                    <Loader size={32} className="spin" /> Cargando reservas...
+                  </td>
+                </tr>
+              ) : currentReservas.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="ra-empty-cell">
+                    <div className="ra-empty-inner">
+                      <CalendarDays size={40} opacity={0.2} />
+                      <span>
+                        {searchTerm || estadoFilter || claseFilter || instructorFilter || caballoFilter
+                          ? "No se encontraron reservas con los filtros aplicados."
+                          : filtroTiempo === "dia"
+                            ? `No hay reservas para el ${formatDate(fechaSeleccionada)}`
+                            : filtroTiempo === "semana"
+                              ? "No hay reservas para la semana seleccionada"
+                              : filtroTiempo === "mes"
+                                ? `No hay reservas para ${getNombreMes()}`
+                                : "No hay reservas para el rango seleccionado"}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               ) : (
                 currentReservas.map(reserva => {
                   const estadoColor = getEstadoBadgeColor(reserva.estatus);
-                  
+
                   return (
-                    <tr key={reserva.id}>
-                      <td style={{ fontWeight: "600" }}>{formatDate(reserva.fecha)}</td>
-                      <td style={{ fontWeight: "600", color: "var(--primary-brown)" }}>
-                        {formatTime(reserva.hora_inicio)}
-                      </td>
-                      <td style={{ fontWeight: "600", color: "var(--primary-brown)" }}>
-                        {formatTime(reserva.hora_fin)}
-                      </td>
-                      <td style={{ color: "var(--charcoal)" }}>
-                        {reserva.cliente_nombre && reserva.cliente_apellido 
+                    <tr key={reserva.id} className="ra-row">
+                      <td className="ra-td ra-td-fecha">{formatDate(reserva.fecha)}</td>
+                      <td className="ra-td ra-td-hora">{formatTime(reserva.hora_inicio)}</td>
+                      <td className="ra-td ra-td-hora">{formatTime(reserva.hora_fin)}</td>
+                      <td className="ra-td ra-td-cliente">
+                        {reserva.cliente_nombre && reserva.cliente_apellido
                           ? `${reserva.cliente_nombre} ${reserva.cliente_apellido}`
                           : "Sin cliente"}
                       </td>
-                      <td style={{ color: "var(--stone-gray)" }}>
+                      <td className="ra-td ra-td-muted">
                         {reserva.instructora_nombre && reserva.instructora_apellido
                           ? `${reserva.instructora_nombre} ${reserva.instructora_apellido}`
                           : "Sin instructora"}
                       </td>
-                      <td style={{ fontWeight: "600", color: "var(--primary-brown)" }}>
+                      <td className="ra-td ra-td-caballo">
                         {reserva.caballo_nombre || "Sin caballo"}
                       </td>
-                      <td style={{ color: "var(--charcoal)" }}>
-                        {reserva.clase_nombre || "Sin clase"}
+                      <td className="ra-td">
+                        {reserva.clase_nombre
+                          ? <span className="ra-clase-badge">{reserva.clase_nombre}</span>
+                          : <span className="ra-td-muted">Sin clase</span>}
                       </td>
-                      <td style={{ color: "var(--charcoal)" }}>
-                        <span style={{
-                          padding: "0.25rem 0.5rem",
-                          borderRadius: "4px",
-                          fontSize: "0.85rem",
-                          background: reserva.tipo === "propietario" ? "rgba(156, 175, 136, 0.1)" :
-                                     reserva.tipo === "renta" ? "rgba(193, 123, 74, 0.1)" :
-                                     reserva.tipo === "media_renta" ? "rgba(212, 165, 116, 0.1)" :
-                                     "rgba(107, 68, 35, 0.05)",
-                          color: reserva.tipo === "propietario" ? "#9caf88" :
-                                reserva.tipo === "renta" ? "#c17b4a" :
-                                reserva.tipo === "media_renta" ? "#d4a574" :
-                                "var(--charcoal)"
-                        }}>
+                      <td className="ra-td">
+                        <span className={`ra-tipo-badge ra-tipo-${reserva.tipo || "normal"}`}>
                           {reserva.tipo === "propietario" ? "Propietario" :
                            reserva.tipo === "renta" ? "Renta" :
                            reserva.tipo === "media_renta" ? "Media Renta" :
                            "Normal"}
                         </span>
                       </td>
-                      <td>
+                      <td className="ra-td">
                         <select
                           value={reserva.estatus}
                           onChange={(e) => cambiarEstatus(reserva.id, e.target.value)}
-                          className="status-badge"
-                          style={{
-                            borderColor: estadoColor.border,
-                            color: estadoColor.color,
-                            padding: "0.4rem 0.6rem",
-                            borderRadius: "6px",
-                            fontWeight: 600,
-                            cursor: "pointer",
-                            background: "white"
-                          }}
+                          className="ra-status-select"
+                          style={{ borderColor: estadoColor.border, color: estadoColor.color }}
                           title="Cambiar estado de la reserva"
                         >
                           <option value="pendiente">Pendiente</option>
@@ -703,7 +519,7 @@ const ReservasAdmin = () => {
             </tbody>
           </table>
         </div>
-      )}
+      </div>
 
       {/* Paginacion */}
       {!loading && filteredReservas.length > itemsPerPage && (

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import useAutoRefresh from '../../hooks/useAutoRefresh';
 import axios from 'axios';
-import { Clock, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, AlertTriangle, CheckCircle, XCircle, Search } from 'lucide-react';
 import { toast } from 'react-toastify';
+import '../../CSS/DisponibilidadHorarios.css';
 
 const API_BASE = 'https://elrefugiocountryclub.com/api/api';
 
@@ -14,6 +15,10 @@ const DisponibilidadHorarios = () => {
   const [franjas, setFranjas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [savingHora, setSavingHora] = useState(null); // hora_inicio que se está guardando
+
+  // Filtros
+  const [searchTerm, setSearchTerm] = useState('');
+  const [estadoFilter, setEstadoFilter] = useState('todas'); // todas | activas | inactivas
 
   const fetchFranjas = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -61,17 +66,31 @@ const DisponibilidadHorarios = () => {
     }
   };
 
+  // ====== Filtros ======
+  const franjasFiltradas = franjas.filter(f => {
+    const activa = f.estado === 'activa';
+    if (estadoFilter === 'activas' && !activa) return false;
+    if (estadoFilter === 'inactivas' && activa) return false;
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      const hora = String(f.hora_inicio || '').toLowerCase();
+      const clases = String(f.clases || '').toLowerCase();
+      if (!hora.includes(term) && !clases.includes(term)) return false;
+    }
+    return true;
+  });
+
+  const estadoLabel = estadoFilter === 'todas' ? 'Todas'
+    : estadoFilter === 'activas' ? 'Activas' : 'Deshabilitadas';
+
   return (
-    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="">
       {/* Header */}
-      <div style={{
-        marginBottom: '2rem', backgroundColor: '#fff', padding: '1.5rem',
-        borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
-      }}>
-        <h2 style={{ fontWeight: '800', color: '#2d5016', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <div className="dh-header">
+        <h2 className="dh-title">
           <Clock size={22} /> Disponibilidad de Horarios
         </h2>
-        <p style={{ color: '#666', marginTop: '4px', marginBottom: 0 }}>
+        <p className="dh-desc">
           Activa o desactiva una franja horaria de forma permanente. Al desactivarla,
           deja de ofrecerse para nuevas reservas en todas las clases y días. Las reservas
           ya hechas se mantienen y puedes reactivarla en cualquier momento.
@@ -79,60 +98,76 @@ const DisponibilidadHorarios = () => {
       </div>
 
       {/* Lista de franjas */}
-      <div style={{ backgroundColor: 'white', borderRadius: '12px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+      <div className="dh-lista">
+        {/* Filtros integrados en la card */}
+        <div className="dh-filtros">
+          <div className="dh-search-wrap">
+            <Search size={14} className="dh-search-icon" />
+            <input
+              type="text"
+              placeholder="Buscar por hora o clase..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="dh-search-input"
+            />
+          </div>
+          <select
+            value={estadoFilter}
+            onChange={e => setEstadoFilter(e.target.value)}
+            className="dh-filter-select"
+          >
+            <option value="todas">Todas</option>
+            <option value="activas">Activas</option>
+            <option value="inactivas">Deshabilitadas</option>
+          </select>
+        </div>
+
+        {/* Resumen de filtros */}
+        <p className="dh-summary">
+          Mostrando <strong>{franjasFiltradas.length} franja{franjasFiltradas.length !== 1 ? 's' : ''}</strong>
+          {' · '}{estadoLabel}
+          {!searchTerm && estadoFilter === 'todas' && (
+            <span className="dh-summary-hint"> · Usa los filtros para ajustar la búsqueda</span>
+          )}
+        </p>
+
         {loading ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>Cargando…</div>
-        ) : franjas.length === 0 ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: '#666' }}>
-            <AlertTriangle size={32} style={{ color: '#cbd5e0', marginBottom: '0.5rem' }} />
-            <div>No hay franjas horarias configuradas.</div>
+          <div className="dh-empty">
+            <div>Cargando…</div>
+          </div>
+        ) : franjasFiltradas.length === 0 ? (
+          <div className="dh-empty">
+            <AlertTriangle size={40} opacity={0.2} className="dh-empty-icon" />
+            <div>{franjas.length === 0 ? 'No hay franjas horarias configuradas.' : 'No hay franjas con los filtros aplicados.'}</div>
           </div>
         ) : (
-          <div style={{
-            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '1rem', padding: '1.25rem'
-          }}>
-            {franjas.map(f => {
+          <div className="dh-grid">
+            {franjasFiltradas.map(f => {
               const activa = f.estado === 'activa';
               const saving = savingHora === f.hora_inicio;
               return (
-                <div key={f.hora_inicio} style={{
-                  border: `2px solid ${activa ? '#d1fae5' : '#fee2e2'}`,
-                  backgroundColor: activa ? '#f0fdf4' : '#fef2f2',
-                  borderRadius: '10px', padding: '1rem',
-                  display: 'flex', flexDirection: 'column', gap: '0.75rem'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#2d3748', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Clock size={18} style={{ color: '#718096' }} /> {f.hora_inicio}
+                <div key={f.hora_inicio} className={`dh-card${activa ? ' is-active' : ''}`}>
+                  <div className="dh-card-head">
+                    <span className="dh-hora">
+                      <Clock size={18} className="dh-hora-icon" /> {f.hora_inicio}
                     </span>
-                    <span style={{
-                      display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                      padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.78rem', fontWeight: 700,
-                      backgroundColor: activa ? '#dcfce7' : '#fee2e2',
-                      color: activa ? '#166534' : '#991b1b'
-                    }}>
+                    <span className={`dh-badge${activa ? ' is-active' : ''}`}>
                       {activa ? <CheckCircle size={14} /> : <XCircle size={14} />}
                       {activa ? 'Activa' : 'Deshabilitada'}
                     </span>
                   </div>
 
-                  <div style={{ fontSize: '0.82rem', color: '#4a5568', textTransform: 'capitalize', minHeight: '2.4em' }}>
+                  <div className="dh-clases">
                     {f.clases}
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: '#718096' }}>
+                  <div className="dh-conteo">
                     {f.activos} de {f.total} clase(s) activas en esta franja
                   </div>
 
                   <button
                     onClick={() => toggleFranja(f)}
                     disabled={saving}
-                    style={{
-                      marginTop: 'auto', padding: '0.65rem 1rem', borderRadius: '8px', border: 'none',
-                      cursor: saving ? 'wait' : 'pointer', fontWeight: 700, color: 'white',
-                      backgroundColor: activa ? '#e03131' : '#2d5016',
-                      opacity: saving ? 0.7 : 1
-                    }}
+                    className={`dh-btn${activa ? ' is-active' : ''}`}
                   >
                     {saving ? 'Guardando…' : activa ? 'Deshabilitar franja' : 'Habilitar franja'}
                   </button>

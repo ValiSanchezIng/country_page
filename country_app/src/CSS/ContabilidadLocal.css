@@ -1,0 +1,294 @@
+/* ====== ContabilidadLocal — estilos extraídos de inline ====== */
+
+/* Toplines de tarjetas de estadísticas */
+.cl-topline-total   { background-color: #c17b4a; }
+.cl-topline-active  { background-color: #9caf88; }
+.cl-topline-blocked { background-color: #8b5a2b; }
+.cl-topline-pending { background-color: #d4a574; }
+
+/* Estado de carga */
+.cl-loading-box {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(107, 68, 35, 0.06);
+}
+
+.cl-loading-icon {
+  color: var(--terracotta);
+  margin-bottom: 1rem;
+}
+
+.cl-loading-text {
+  color: var(--primary-brown);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* Tabla */
+.cl-table-wrap {
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.cl-empty-cell {
+  text-align: center;
+  padding: 3rem;
+  color: var(--terracotta);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.cl-name-cell {
+  font-weight: 600;
+}
+
+.cl-email {
+  color: var(--stone-gray);
+}
+
+.cl-no-email {
+  color: #dc3545;
+  font-weight: bold;
+  font-size: 13px;
+  font-style: italic;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background-color: #f8d7da;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.cl-fee-cell {
+  font-weight: 600;
+  color: var(--primary-brown);
+}
+
+.cl-next-cell {
+  color: var(--charcoal);
+  font-weight: 500;
+}
+
+.cl-next-cell.is-expired {
+  color: #8b5a2b;
+  font-weight: 600;
+}
+
+/* Badge de estado (modificadores por estado) */
+.status-badge.is-activo    { border-color: #9caf88; color: #9caf88; }
+.status-badge.is-inactivo  { border-color: #c17b4a; color: #c17b4a; }
+.status-badge.is-pendiente { border-color: #d4a574; color: #d4a574; }
+.status-badge.is-bloqueado { border-color: #8b5a2b; color: #8b5a2b; }
+
+/* Botón de historial */
+.cl-history-btn {
+  background: linear-gradient(135deg, var(--terracotta), var(--primary-brown));
+  color: white;
+  border: none;
+  position: relative;
+}
+
+/* Modal agregar cliente */
+.cl-info-box {
+  background: rgba(139, 111, 78, 0.1);
+  border: 1px solid rgba(139, 111, 78, 0.3);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 10px 0 20px 0;
+  font-size: 14px;
+  color: #8b6f4e;
+}
+
+.cl-field-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cl-email-label.is-disabled {
+  color: #999;
+}
+
+.cl-email-input {
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 8px 12px;
+  background-color: white;
+  color: inherit;
+  cursor: text;
+}
+
+.cl-email-input:disabled {
+  background-color: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.cl-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #495057;
+  margin-top: 4px;
+}
+
+.cl-checkbox-input {
+  width: 16px;
+  height: 16px;
+}
+
+.cl-hint {
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+/* Caja de credenciales */
+.cl-cred-box {
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.cl-cred-box.is-created {
+  background: #d4edda;
+  border-color: #c3e6cb;
+}
+
+.cl-cred-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.cl-cred-title {
+  margin: 0;
+  color: #856404;
+  font-size: 14px;
+}
+
+.cl-cred-title.is-created {
+  color: #155724;
+}
+
+.cl-copy-btn {
+  padding: 6px 12px;
+  background-color: #f0ad4e;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cl-copy-btn.is-created {
+  background-color: #28a745;
+}
+
+.cl-copy-msg {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  text-align: center;
+}
+
+.cl-reco {
+  background: #fcf8e3;
+  color: #8a6d3b;
+  border: 1px solid #faebcc;
+  border-radius: 4px;
+  padding: 10px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.cl-cred-group {
+  margin-bottom: 10px;
+}
+
+.cl-cred-label {
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: bold;
+}
+
+.cl-cred-value {
+  background: white;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  padding: 8px;
+  font-family: monospace;
+  font-size: 14px;
+}
+
+.cl-cred-label-row {
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.cl-editable-tag {
+  font-size: 11px;
+  color: #8b6f4e;
+  font-weight: normal;
+}
+
+.cl-pass-input {
+  width: 100%;
+  border: 2px solid #8b6f4e;
+  border-radius: 4px;
+  padding: 8px;
+  font-family: monospace;
+  font-size: 14px;
+  background-color: #fafafa;
+  cursor: text;
+}
+
+.cl-pass-input.is-invalid {
+  border-color: #dc3545;
+}
+
+.cl-pass-input.is-created {
+  border-color: #28a745;
+  background-color: #f8fff9;
+  cursor: default;
+}
+
+.cl-pass-error {
+  font-size: 11px;
+  color: #dc3545;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+.cl-pass-ok {
+  font-size: 11px;
+  color: #28a745;
+  margin-top: 4px;
+  font-weight: 500;
+}
+
+/* Historial de pagos */
+.cl-history-empty {
+  color: var(--stone-gray);
+  font-style: italic;
+}

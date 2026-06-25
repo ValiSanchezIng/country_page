@@ -1,9 +1,22 @@
-.dashboard-header {
-    background: linear-gradient(135deg, #fefcf7 0%, #fefcf7 100%);
+.admin-container .dashboard-header {
+    background: #fff;
     border-radius: 16px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 8px 32px rgba(107, 68, 35, 0.15);
+    padding: 1.6rem 1.9rem;
+    margin-bottom: 1.75rem;
+    border: 1px solid rgba(107, 68, 35, 0.08);
+    box-shadow: 0 4px 18px rgba(107, 68, 35, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.admin-container .dashboard-header::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #9caf88 0%, #c17b4a 50%, #6b4423 100%);
 }
 
 .header-content {
@@ -14,17 +27,18 @@
     gap: 1.5rem;
 }
 
-.header-title {
-    font-size: 2rem;
+.admin-container .header-title {
+    font-size: 1.7rem;
     font-weight: 700;
-    color: #6B4423;
-    margin: 0 0 0.5rem 0;
-    
+    color: #4a2c17;
+    font-family: var(--font-primary, "Roboto Flex"), serif;
+    letter-spacing: -0.02em;
+    margin: 0 0 0.35rem 0;
 }
 
-.header-subtitle {
-    font-size: 1rem;
-    color: #6B4423;;
+.admin-container .header-subtitle {
+    font-size: 0.95rem;
+    color: #8b5a2b;
     margin: 0;
 }
 
@@ -60,9 +74,9 @@
 }
 
 .tab-button.active {
-    background: linear-gradient(135deg, #c17b4a 0%, #8b5a2b 100%);
+    background: linear-gradient(135deg, #c17b4a 0%, #6b4423 100%);
     color: white;
-    box-shadow: 0 4px 12px rgba(107, 68, 35, 0.2);
+    box-shadow: 0 4px 12px rgba(193, 123, 74, 0.3);
 }
 
 .stats-grid {
@@ -377,9 +391,9 @@
 /* Container and top-right logout used by Administrador.jsx */
 .admin-container {
     min-height: 100vh;
-    background: linear-gradient(135deg, #A67C52 0%, #daac76 100%);
-    padding: 2rem;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(160deg, #faf8f3 0%, #f5f1e8 100%);
+    padding: 1.75rem 2rem 2.5rem;
+    font-family: var(--font-secondary, "Roboto Flex"), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 .admin-logout {

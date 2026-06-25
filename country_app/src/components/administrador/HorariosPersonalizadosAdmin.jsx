@@ -3,6 +3,7 @@ import useAutoRefresh from '../../hooks/useAutoRefresh';
 import axios from 'axios';
 import { Plus, Trash2, Calendar, Clock, User, CheckCircle, XCircle, Edit2, Save, X, Search, MoreVertical } from 'lucide-react';
 import { toast } from 'react-toastify';
+import '../../CSS/HorariosPersonalizadosAdmin.css';
 
 // Combobox: input con búsqueda + lista desplegable filtrable
 const SearchableSelect = ({ value, onChange, options, placeholder, disabled, required }) => {
@@ -52,10 +53,10 @@ const SearchableSelect = ({ value, onChange, options, placeholder, disabled, req
   };
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+    <div ref={containerRef} className="hp-select">
       {/* Input visible */}
-      <div style={{ position: 'relative' }}>
-        <Search size={15} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#a0aec0', pointerEvents: 'none' }} />
+      <div className="hp-select-input-wrap">
+        <Search size={15} className="hp-select-search-icon" />
         <input
           type="text"
           required={required && !value}
@@ -64,24 +65,13 @@ const SearchableSelect = ({ value, onChange, options, placeholder, disabled, req
           onClick={handleInputClick}
           onChange={handleInputChange}
           placeholder={disabled ? 'Primero seleccione clase' : placeholder}
-          style={{
-            width: '100%',
-            padding: '0.8rem 2.2rem 0.8rem 2.2rem',
-            borderRadius: '8px',
-            border: `2px solid ${open ? '#2d5016' : '#e2e8f0'}`,
-            outline: 'none',
-            backgroundColor: disabled ? '#f8fafc' : 'white',
-            cursor: disabled ? 'not-allowed' : 'text',
-            fontSize: '0.95rem',
-            boxSizing: 'border-box',
-            transition: 'border-color 0.2s'
-          }}
+          className={`hp-select-input${open ? ' is-open' : ''}${disabled ? ' is-disabled' : ''}`}
         />
         {value && !disabled && (
           <button
             type="button"
             onClick={handleClear}
-            style={{ position: 'absolute', right: '0.6rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#a0aec0', padding: '2px', display: 'flex' }}
+            className="hp-select-clear"
           >
             <X size={15} />
           </button>
@@ -89,31 +79,15 @@ const SearchableSelect = ({ value, onChange, options, placeholder, disabled, req
       </div>
       {/* Dropdown */}
       {open && !disabled && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
-          backgroundColor: 'white', borderRadius: '8px',
-          border: '2px solid #e2e8f0', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          zIndex: 1000, maxHeight: '220px', overflowY: 'auto'
-        }}>
+        <div className="hp-select-dropdown">
           {filtered.length === 0 ? (
-            <div style={{ padding: '0.8rem 1rem', color: '#a0aec0', fontSize: '0.85rem' }}>Sin resultados</div>
+            <div className="hp-select-empty">Sin resultados</div>
           ) : (
             filtered.map(opt => (
               <div
                 key={opt.value}
                 onMouseDown={() => handleSelect(opt)}
-                style={{
-                  padding: '0.7rem 1rem',
-                  cursor: 'pointer',
-                  backgroundColor: String(opt.value) === String(value) ? '#f0fdf4' : 'transparent',
-                  color: String(opt.value) === String(value) ? '#2d5016' : '#2d3748',
-                  fontWeight: String(opt.value) === String(value) ? '600' : '400',
-                  fontSize: '0.9rem',
-                  borderBottom: '1px solid #f1f5f9',
-                  transition: 'background-color 0.1s'
-                }}
-                onMouseEnter={e => { if (String(opt.value) !== String(value)) e.currentTarget.style.backgroundColor = '#f8fafc'; }}
-                onMouseLeave={e => { if (String(opt.value) !== String(value)) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                className={`hp-select-option${String(opt.value) === String(value) ? ' is-selected' : ''}`}
               >
                 {opt.label}
               </div>
@@ -414,40 +388,18 @@ const HorariosPersonalizadosAdmin = () => {
   };
 
   return (
-    <div className="hp-admin-container" style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
-      <div className="hp-header" style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: '2rem',
-        backgroundColor: '#fff',
-        padding: '1.5rem',
-        borderRadius: '12px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
-      }}>
+    <div className="">
+      <div className="hp-header">
         <div>
-          <h2 className="hp-section-title" style={{ fontWeight: '800', color: '#2d5016', margin: 0 }}>Gestión de Horarios Especiales</h2>
-          <p className="hp-section-subtitle" style={{ color: '#666', marginTop: '4px' }}>Configura excepciones y horarios personalizados para clientes específicos</p>
+          <h2 className="hp-section-title">Gestión de Horarios Especiales</h2>
+          <p className="hp-section-subtitle">Configura excepciones y horarios personalizados para clientes específicos</p>
         </div>
-        <button 
+        <button
           onClick={() => {
             if (showForm) resetForm();
             else setShowForm(true);
           }}
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.6rem', 
-            backgroundColor: showForm ? '#e03131' : '#2d5016', 
-            color: 'white', 
-            padding: '0.8rem 1.4rem', 
-            borderRadius: '8px',
-            border: 'none',
-            cursor: 'pointer',
-            fontWeight: '600',
-            transition: 'all 0.2s',
-            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-          }}
+          className={`hp-btn-toggle${showForm ? ' is-cancel' : ''}`}
         >
           {showForm ? <X size={20} /> : <Plus size={20} />}
           {showForm ? 'Cancelar' : 'Nuevo Horario Extra'}
@@ -455,24 +407,16 @@ const HorariosPersonalizadosAdmin = () => {
       </div>
 
       {showForm && (
-        <div className="hp-form-card" style={{
-          backgroundColor: 'white',
-          padding: '2rem',
-          borderRadius: '12px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-          marginBottom: '2.5rem',
-          border: '1px solid #edf2f7',
-          animation: 'slideDown 0.3s ease-out'
-        }}>
-          <h3 style={{ marginBottom: '1.5rem', color: '#2d3748', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="hp-form-card">
+          <h3 className="hp-form-title">
             {editingId ? <Edit2 size={20} /> : <Plus size={20} />}
             {editingId ? 'Editar Horario Especial' : 'Crear Nuevo Horario Especial'}
           </h3>
-          
+
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem' }}>
+            <div className="hp-form-grid">
               <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: '600', color: '#4a5568', fontSize: '0.9rem' }}>Cliente</label>
+                <label className="hp-label">Cliente</label>
                 <SearchableSelect
                   required
                   value={formData.cliente_id}
@@ -483,12 +427,12 @@ const HorariosPersonalizadosAdmin = () => {
               </div>
 
               <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: '600', color: '#4a5568', fontSize: '0.9rem' }}>Clase</label>
-                <select 
+                <label className="hp-label">Clase</label>
+                <select
                   required
-                  value={formData.clase_id} 
+                  value={formData.clase_id}
                   onChange={(e) => handleClaseChange(e.target.value)}
-                  style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '2px solid #e2e8f0', outline: 'none' }}
+                  className="hp-input"
                 >
                   <option value="">Seleccione clase...</option>
                   {clases.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
@@ -496,7 +440,7 @@ const HorariosPersonalizadosAdmin = () => {
               </div>
 
               <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: '600', color: '#4a5568', fontSize: '0.9rem' }}>Instructora</label>
+                <label className="hp-label">Instructora</label>
                 <SearchableSelect
                   required
                   disabled={!formData.clase_id}
@@ -509,15 +453,15 @@ const HorariosPersonalizadosAdmin = () => {
                   }
                 />
                 {formData.clase_id && instructoras.filter(i => instructoraClases.some(ic => ic.instructora_id === i.id && ic.clase_id === parseInt(formData.clase_id))).length === 0 && (
-                  <p style={{ color: '#e03131', fontSize: '0.75rem', marginTop: '4px' }}>No hay instructoras disponibles para esta clase</p>
+                  <p className="hp-warning">No hay instructoras disponibles para esta clase</p>
                 )}
               </div>
 
               <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: '600', color: '#4a5568', fontSize: '0.9rem' }}>Duración Sugerida</label>
-                <select 
+                <label className="hp-label">Duración Sugerida</label>
+                <select
                   onChange={(e) => handleDuracionManual(e.target.value)}
-                  style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '2px solid #e2e8f0', outline: 'none', backgroundColor: '#f8fafc' }}
+                  className="hp-input hp-input-muted"
                   value={(parseInt(formData.hora_fin.split(':')[0]) * 60 + parseInt(formData.hora_fin.split(':')[1])) - (parseInt(formData.hora_inicio.split(':')[0]) * 60 + parseInt(formData.hora_inicio.split(':')[1]))}
                 >
                   <option value="30">Media Hora (30 min)</option>
@@ -528,31 +472,19 @@ const HorariosPersonalizadosAdmin = () => {
               </div>
 
               <div className="form-group">
-                <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: '600', color: '#4a5568', fontSize: '0.9rem' }}>Tipo de Horario</label>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button 
+                <label className="hp-label">Tipo de Horario</label>
+                <div className="hp-tipo-group">
+                  <button
                     type="button"
                     onClick={() => setFormData({...formData, tipo: 'fecha_especifica'})}
-                    style={{ 
-                      flex: 1, padding: '0.8rem', borderRadius: '8px', border: '2px solid',
-                      borderColor: formData.tipo === 'fecha_especifica' ? '#2d5016' : '#e2e8f0',
-                      backgroundColor: formData.tipo === 'fecha_especifica' ? '#f0fdf4' : 'white',
-                      color: formData.tipo === 'fecha_especifica' ? '#2d5016' : '#4a5568',
-                      cursor: 'pointer', fontWeight: '600'
-                    }}
+                    className={`hp-tipo-btn${formData.tipo === 'fecha_especifica' ? ' is-active' : ''}`}
                   >
                     Fecha Única
                   </button>
-                  <button 
+                  <button
                     type="button"
                     onClick={() => setFormData({...formData, tipo: 'recurrente'})}
-                    style={{ 
-                      flex: 1, padding: '0.8rem', borderRadius: '8px', border: '2px solid',
-                      borderColor: formData.tipo === 'recurrente' ? '#2d5016' : '#e2e8f0',
-                      backgroundColor: formData.tipo === 'recurrente' ? '#f0fdf4' : 'white',
-                      color: formData.tipo === 'recurrente' ? '#2d5016' : '#4a5568',
-                      cursor: 'pointer', fontWeight: '600'
-                    }}
+                    className={`hp-tipo-btn${formData.tipo === 'recurrente' ? ' is-active' : ''}`}
                   >
                     Cada Semana
                   </button>
@@ -561,26 +493,26 @@ const HorariosPersonalizadosAdmin = () => {
 
               {formData.tipo === 'fecha_especifica' ? (
                 <div className="form-group">
-                  <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: '600', color: '#4a5568', fontSize: '0.9rem' }}>Fecha</label>
-                  <input 
-                    type="date" 
+                  <label className="hp-label">Fecha</label>
+                  <input
+                    type="date"
                     required
-                    value={formData.fecha} 
+                    value={formData.fecha}
                     onChange={(e) => setFormData({...formData, fecha: e.target.value})}
-                    style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '2px solid #e2e8f0', outline: 'none' }}
+                    className="hp-input"
                   />
                 </div>
               ) : (
                 <div className="form-group">
-                  <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: '600', color: '#4a5568', fontSize: '0.9rem' }}>
+                  <label className="hp-label">
                     Días de la Semana
                     {!editingId && (
-                      <span style={{ marginLeft: '0.5rem', fontWeight: '400', color: '#a0aec0', fontSize: '0.8rem' }}>
+                      <span className="hp-label-hint">
                         (puedes seleccionar varios)
                       </span>
                     )}
                   </label>
-                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  <div className="hp-dias-group">
                     {Object.entries(dayMapLong).map(([key, label]) => {
                       const isSelected = formData.dias_semana.includes(key);
                       return (
@@ -589,20 +521,7 @@ const HorariosPersonalizadosAdmin = () => {
                           type="button"
                           onClick={() => handleDiaToggle(key)}
                           title={label}
-                          style={{
-                            padding: '0.55rem 0.9rem',
-                            borderRadius: '8px',
-                            border: '2px solid',
-                            borderColor: isSelected ? '#2d5016' : '#e2e8f0',
-                            backgroundColor: isSelected ? '#2d5016' : 'white',
-                            color: isSelected ? 'white' : '#4a5568',
-                            fontWeight: '700',
-                            fontSize: '0.85rem',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s',
-                            minWidth: '42px',
-                            textAlign: 'center'
-                          }}
+                          className={`hp-dia-btn${isSelected ? ' is-active' : ''}`}
                         >
                           {key}
                         </button>
@@ -610,76 +529,44 @@ const HorariosPersonalizadosAdmin = () => {
                     })}
                   </div>
                   {!editingId && formData.dias_semana.length > 1 && (
-                    <p style={{ marginTop: '0.5rem', fontSize: '0.78rem', color: '#059669', fontWeight: '600' }}>
+                    <p className="hp-dias-info">
                       ✓ Se crearán {formData.dias_semana.length} horarios: {formData.dias_semana.map(d => dayMapLong[d]).join(', ')}
                     </p>
                   )}
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: '600', color: '#4a5568', fontSize: '0.9rem' }}>Hora Inicio</label>
-                  <input 
-                    type="time" 
+              <div className="hp-hora-row">
+                <div className="hp-hora-col">
+                  <label className="hp-label">Hora Inicio</label>
+                  <input
+                    type="time"
                     required
-                    value={formData.hora_inicio} 
+                    value={formData.hora_inicio}
                     onChange={(e) => handleHoraInicioChange(e.target.value)}
-                    style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '2px solid #e2e8f0', outline: 'none' }}
+                    className="hp-input"
                   />
                 </div>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '0.6rem', fontWeight: '600', color: '#4a5568', fontSize: '0.9rem' }}>Hora Fin</label>
-                  <input 
-                    type="time" 
+                <div className="hp-hora-col">
+                  <label className="hp-label">Hora Fin</label>
+                  <input
+                    type="time"
                     required
-                    value={formData.hora_fin} 
+                    value={formData.hora_fin}
                     onChange={(e) => setFormData({...formData, hora_fin: e.target.value})}
-                    style={{ width: '100%', padding: '0.8rem', borderRadius: '8px', border: '2px solid #e2e8f0', outline: 'none' }}
+                    className="hp-input"
                   />
                 </div>
               </div>
             </div>
-            
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '2.5rem' }}>
-              <button 
-                type="submit"
-                style={{ 
-                  flex: 3,
-                  backgroundColor: '#2d5016', 
-                  color: 'white', 
-                  padding: '1rem', 
-                  borderRadius: '10px', 
-                  border: 'none', 
-                  fontWeight: '700',
-                  fontSize: '1rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  transition: 'transform 0.1s alternate',
-                  boxShadow: '0 4px 12px rgba(45, 80, 22, 0.2)'
-                }}
-              >
+
+            <div className="hp-form-actions">
+              <button type="submit" className="hp-btn-submit">
                 {editingId ? <Save size={20} /> : <CheckCircle size={20} />}
                 {editingId ? 'Actualizar Horario' : 'Confirmar y Guardar'}
               </button>
               {editingId && (
-                <button 
-                  type="button"
-                  onClick={resetForm}
-                  style={{ 
-                    flex: 1,
-                    backgroundColor: '#f7fafc', 
-                    color: '#4a5568', 
-                    padding: '1rem', 
-                    borderRadius: '10px', 
-                    border: '2px solid #e2e8f0', 
-                    fontWeight: '700',
-                    cursor: 'pointer'
-                  }}
-                >
+                <button type="button" onClick={resetForm} className="hp-btn-discard">
                   Descartar
                 </button>
               )}
@@ -688,44 +575,23 @@ const HorariosPersonalizadosAdmin = () => {
         </div>
       )}
 
-      <div className="hp-list" style={{
-        backgroundColor: 'white',
-        borderRadius: '16px',
-        overflow: 'hidden',
-        boxShadow: '0 4px 25px rgba(0,0,0,0.06)',
-        border: '1px solid #edf2f7'
-      }}>
+      <div className="hp-list">
         {/* Filtros integrados en la card */}
-        <div style={{
-          display: 'flex', flexWrap: 'wrap', gap: '0.6rem', alignItems: 'center',
-          padding: '1rem 1.5rem',
-          borderBottom: '1px solid #edf2f7',
-          background: '#fafbfc'
-        }}>
-          <div style={{ position: 'relative', flex: '1 1 200px', maxWidth: '280px' }}>
-            <Search size={14} style={{ position: 'absolute', left: '0.7rem', top: '50%', transform: 'translateY(-50%)', color: '#a0aec0' }} />
+        <div className="hp-filters">
+          <div className="hp-search-wrap">
+            <Search size={14} className="hp-search-icon" />
             <input
               type="text"
               placeholder="Buscar cliente o instructora..."
               value={hpSearchTerm}
               onChange={e => setHpSearchTerm(e.target.value)}
-              style={{
-                width: '100%', padding: '0.45rem 0.7rem 0.45rem 2rem',
-                border: '1.5px solid #e2e8f0', borderRadius: '7px', fontSize: '0.82rem',
-                background: 'white', color: '#2d3748', boxSizing: 'border-box'
-              }}
+              className="hp-search-input"
             />
           </div>
           <select
             value={hpTipoFilter}
             onChange={e => setHpTipoFilter(e.target.value)}
-            style={{
-              padding: '0.45rem 1.8rem 0.45rem 0.7rem', border: '1.5px solid #e2e8f0',
-              borderRadius: '7px', fontSize: '0.82rem', background: 'white', color: '#2d3748',
-              cursor: 'pointer', appearance: 'none',
-              backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%23718096' d='M6 9L1 4h10z'/%3E%3C/svg%3E\")",
-              backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.6rem center'
-            }}
+            className="hp-filter-select"
           >
             <option value="">Todos</option>
             <option value="vigentes">Vigentes</option>
@@ -736,13 +602,7 @@ const HorariosPersonalizadosAdmin = () => {
           <select
             value={hpSortBy}
             onChange={e => setHpSortBy(e.target.value)}
-            style={{
-              padding: '0.45rem 1.8rem 0.45rem 0.7rem', border: '1.5px solid #e2e8f0',
-              borderRadius: '7px', fontSize: '0.82rem', background: 'white', color: '#2d3748',
-              cursor: 'pointer', appearance: 'none',
-              backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%23718096' d='M6 9L1 4h10z'/%3E%3C/svg%3E\")",
-              backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.6rem center'
-            }}
+            className="hp-filter-select"
           >
             <option value="cliente">Por cliente</option>
             <option value="instructora">Por instructora</option>
@@ -751,32 +611,32 @@ const HorariosPersonalizadosAdmin = () => {
         </div>
 
         {/* Resumen de filtros */}
-        <p style={{ margin: 0, padding: '0.5rem 1.5rem 0.6rem', fontSize: '0.82rem', color: '#4a5568', borderBottom: '1px solid #edf2f7' }}>
+        <p className="hp-summary">
           Mostrando <strong>{hpFilteredCount} horario{hpFilteredCount !== 1 ? 's' : ''}</strong>
           {' · '}{hpTipoFilter === 'vigentes' ? 'Vigentes' : hpTipoFilter === 'recurrente' ? 'Recurrentes' : hpTipoFilter === 'fecha_especifica' ? 'Fecha única' : hpTipoFilter === 'pasados' ? 'Pasados' : 'Todos'}
           {' · '}{hpSortBy === 'cliente' ? 'Por cliente' : hpSortBy === 'instructora' ? 'Por instructora' : 'Por clase'}
           {!hpTipoFilter && !hpSearchTerm && (
-            <span style={{ fontStyle: 'italic', opacity: 0.6 }}> · Usa los filtros para ajustar la búsqueda</span>
+            <span className="hp-summary-hint"> · Usa los filtros para ajustar la búsqueda</span>
           )}
         </p>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="hp-table-wrap">
+          <table className="hp-table">
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(107,68,35,0.08)' }}>
-                <th style={{ textAlign: 'left', padding: '0.75rem 1.5rem', color: 'var(--secondary-brown)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.5px', fontWeight: 700 }}>Cliente</th>
-                <th style={{ textAlign: 'left', padding: '0.75rem 1.5rem', color: 'var(--secondary-brown)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.5px', fontWeight: 700 }}>Clase</th>
-                <th style={{ textAlign: 'left', padding: '0.75rem 1.5rem', color: 'var(--secondary-brown)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.5px', fontWeight: 700 }}>Instructora</th>
-                <th style={{ textAlign: 'left', padding: '0.75rem 1.5rem', color: 'var(--secondary-brown)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.5px', fontWeight: 700 }}>Periodicidad</th>
-                <th style={{ textAlign: 'left', padding: '0.75rem 1.5rem', color: 'var(--secondary-brown)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.5px', fontWeight: 700 }}>Horario</th>
-                <th style={{ textAlign: 'center', padding: '0.75rem 1.5rem', color: 'var(--secondary-brown)', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.5px', fontWeight: 700, width: '60px' }}></th>
+              <tr>
+                <th>Cliente</th>
+                <th>Clase</th>
+                <th>Instructora</th>
+                <th>Periodicidad</th>
+                <th>Horario</th>
+                <th className="hp-th-actions"></th>
               </tr>
             </thead>
             <tbody>
               {horarios.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '4rem', color: '#a0aec0' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                  <td colSpan="6" className="hp-empty-cell">
+                    <div className="hp-empty-inner">
                       <Calendar size={48} opacity={0.2} />
                       <span>No hay horarios personalizados configurados</span>
                     </div>
@@ -852,7 +712,7 @@ const HorariosPersonalizadosAdmin = () => {
                 if (grupos.length === 0) {
                   return (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', padding: '3rem', color: '#a0aec0' }}>
+                      <td colSpan="6" className="hp-noresults-cell">
                         No se encontraron horarios con los filtros aplicados.
                       </td>
                     </tr>
@@ -862,121 +722,77 @@ const HorariosPersonalizadosAdmin = () => {
                 return grupos.map(grupo => {
                   const esPasado = grupo.tipo === 'fecha_especifica' && grupo.fecha && new Date(grupo.fecha) < hoy;
                   return (
-                  <tr key={grupo._ids.join('-')} style={{ borderBottom: '1px solid rgba(107,68,35,0.06)', transition: 'background-color 0.15s', opacity: esPasado ? 0.45 : 1 }}>
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <div style={{ fontWeight: '600', color: 'var(--dark-brown)', fontSize: '0.88rem' }}>{grupo.cliente_nombre} {grupo.cliente_apellido}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--stone-gray)' }}>#{grupo.cliente_id}</div>
+                  <tr key={grupo._ids.join('-')} className={`hp-row${esPasado ? ' is-past' : ''}`}>
+                    <td className="hp-td">
+                      <div className="hp-cliente-name">{grupo.cliente_nombre} {grupo.cliente_apellido}</div>
+                      <div className="hp-cliente-id">#{grupo.cliente_id}</div>
                     </td>
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <span style={{
-                        backgroundColor: 'rgba(193, 123, 74, 0.08)',
-                        color: 'var(--primary-brown)',
-                        padding: '0.25rem 0.65rem',
-                        borderRadius: '6px',
-                        fontSize: '0.75rem',
-                        fontWeight: '700',
-                        letterSpacing: '0.3px',
-                        textTransform: 'uppercase'
-                      }}>
+                    <td className="hp-td">
+                      <span className="hp-clase-badge">
                         {grupo.clase_nombre}
                       </span>
                     </td>
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <div style={{ width: '28px', height: '28px', borderRadius: '7px', backgroundColor: grupo.instructora_disponibilidad !== 'disponible' ? 'rgba(224,49,49,0.10)' : 'rgba(156,175,136,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: grupo.instructora_disponibilidad !== 'disponible' ? '#e03131' : '#7a9768' }}>
+                    <td className="hp-td">
+                      <div className="hp-instr-cell">
+                        <div className={`hp-instr-avatar${grupo.instructora_disponibilidad !== 'disponible' ? ' is-unavailable' : ''}`}>
                           {grupo.instructora_disponibilidad !== 'disponible' ? <XCircle size={14} /> : <User size={14} />}
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                          <span style={{ color: grupo.instructora_disponibilidad !== 'disponible' ? '#e03131' : 'var(--charcoal)', fontWeight: '500', fontSize: '0.88rem' }}>{grupo.instructora_nombre} {grupo.instructora_apellido}</span>
+                        <div className="hp-instr-info">
+                          <span className={`hp-instr-name${grupo.instructora_disponibilidad !== 'disponible' ? ' is-unavailable' : ''}`}>{grupo.instructora_nombre} {grupo.instructora_apellido}</span>
                           {grupo.instructora_disponibilidad !== 'disponible' && (
-                            <span style={{ fontSize: '0.68rem', color: '#e03131', fontWeight: 600 }}>Instructora no disponible</span>
+                            <span className="hp-instr-unavailable-tag">Instructora no disponible</span>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: '1rem 1.5rem' }}>
+                    <td className="hp-td">
                       {grupo.tipo === 'recurrente' ? (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                        <div className="hp-dias-badges">
                           {grupo._dias.map(d => {
                             const nombres = { L: 'Lunes', M: 'Martes', X: 'Miércoles', J: 'Jueves', V: 'Viernes', S: 'Sábado', D: 'Domingo' };
                             return (
-                              <span key={d} style={{
-                                backgroundColor: 'rgba(156,175,136,0.15)',
-                                color: '#5a7a47',
-                                padding: '0.2rem 0.55rem',
-                                borderRadius: '4px',
-                                fontSize: '0.75rem',
-                                fontWeight: '600'
-                              }}>{nombres[d] || d}</span>
+                              <span key={d} className="hp-dia-badge">{nombres[d] || d}</span>
                             );
                           })}
                         </div>
                       ) : (
                         <div>
-                          <div style={{ color: esPasado ? 'var(--stone-gray)' : 'var(--dark-brown)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '500', fontSize: '0.85rem' }}>
-                            <Calendar size={14} style={{ opacity: 0.5 }} /> {new Date(grupo.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          <div className={`hp-fecha${esPasado ? ' is-past' : ''}`}>
+                            <Calendar size={14} className="hp-fecha-icon" /> {new Date(grupo.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </div>
                           {esPasado && (
-                            <span style={{ fontSize: '0.68rem', color: '#c17b4a', fontWeight: 500 }}>Fecha pasada</span>
+                            <span className="hp-fecha-past-tag">Fecha pasada</span>
                           )}
                         </div>
                       )}
                     </td>
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <div style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        padding: '0.3rem 0.7rem',
-                        backgroundColor: 'rgba(107,68,35,0.05)',
-                        borderRadius: '6px',
-                        color: 'var(--dark-brown)',
-                        fontWeight: '700',
-                        fontSize: '0.85rem',
-                        fontFamily: 'var(--font-secondary)',
-                        letterSpacing: '0.2px'
-                      }}>
+                    <td className="hp-td">
+                      <div className="hp-horario-badge">
                         {grupo.hora_inicio} - {grupo.hora_fin}
                       </div>
                     </td>
-                    <td style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
-                      <div style={{ position: 'relative', display: 'inline-block' }}>
+                    <td className="hp-td-actions">
+                      <div className="hp-menu-wrap">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             const menuKey = grupo._ids.join('-');
                             setHpOpenMenuId(hpOpenMenuId === menuKey ? null : menuKey);
                           }}
-                          style={{
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            width: '34px', height: '34px', border: '1.5px solid #e2e8f0',
-                            borderRadius: '8px', background: 'white', color: '#718096',
-                            cursor: 'pointer', transition: 'all 0.15s'
-                          }}
+                          className="hp-menu-trigger"
                         >
                           <MoreVertical size={16} />
                         </button>
                         {hpOpenMenuId === grupo._ids.join('-') && (
-                          <div onClick={e => e.stopPropagation()} style={{
-                            position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 100,
-                            background: 'white', border: '1px solid #edf2f7', borderRadius: '10px',
-                            boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: '180px', padding: '4px',
-                            animation: 'slideDown 0.12s ease-out'
-                          }}>
+                          <div onClick={e => e.stopPropagation()} className="hp-menu">
                             <button
                               onClick={() => { handleEdit(grupo); setHpOpenMenuId(null); }}
-                              style={{
-                                display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
-                                padding: '8px 12px', border: 'none', borderRadius: '7px',
-                                background: 'none', cursor: 'pointer', color: '#2d3748',
-                                fontSize: '0.84rem', fontWeight: 500, textAlign: 'left'
-                              }}
-                              onMouseEnter={e => e.currentTarget.style.background = '#f7fafc'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                              className="hp-menu-item"
                             >
-                              <Edit2 size={15} style={{ color: '#4a90e2' }} />
+                              <Edit2 size={15} className="hp-menu-item-icon-edit" />
                               Editar horario
                             </button>
-                            <div style={{ height: '1px', background: '#f1f5f9', margin: '3px 8px' }} />
+                            <div className="hp-menu-divider" />
                             <button
                               onClick={async () => {
                                 setHpOpenMenuId(null);
@@ -994,14 +810,7 @@ const HorariosPersonalizadosAdmin = () => {
                                   toast.error('Error al eliminar');
                                 }
                               }}
-                              style={{
-                                display: 'flex', alignItems: 'center', gap: '8px', width: '100%',
-                                padding: '8px 12px', border: 'none', borderRadius: '7px',
-                                background: 'none', cursor: 'pointer', color: '#e03131',
-                                fontSize: '0.84rem', fontWeight: 500, textAlign: 'left'
-                              }}
-                              onMouseEnter={e => e.currentTarget.style.background = '#fff5f5'}
-                              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                              className="hp-menu-item is-danger"
                             >
                               <Trash2 size={15} />
                               Eliminar
@@ -1018,19 +827,6 @@ const HorariosPersonalizadosAdmin = () => {
           </table>
         </div>
       </div>
-      
-      <style>{`
-        @keyframes slideDown {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .hp-list tr:hover {
-          background-color: #f8fafc;
-        }
-        button:hover {
-          filter: brightness(0.95);
-        }
-      `}</style>
     </div>
   );
 };

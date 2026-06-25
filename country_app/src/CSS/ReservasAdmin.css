@@ -1,0 +1,318 @@
+/* ====== ReservasAdmin ====== */
+
+@keyframes raSlideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Header */
+.reservas-admin-container .ra-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  background: #fff;
+  padding: 1.4rem 1.75rem;
+  border-radius: 16px;
+  border: 1px solid rgba(107, 68, 35, 0.08);
+  box-shadow: 0 4px 18px rgba(107, 68, 35, 0.08);
+  gap: 1rem;
+  flex-wrap: wrap;
+  position: relative;
+  overflow: hidden;
+}
+
+.reservas-admin-container .ra-header::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--sage-green) 0%, var(--terracotta) 50%, var(--primary-brown) 100%);
+}
+
+.reservas-admin-container .ra-title {
+  font-weight: 700;
+  color: var(--primary-brown);
+  font-family: var(--font-primary);
+  letter-spacing: -0.01em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.reservas-admin-container .ra-desc {
+  color: var(--secondary-brown);
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+/* Lista (card) */
+.reservas-admin-container .ra-lista {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(107, 68, 35, 0.07);
+  border: 1px solid rgba(107, 68, 35, 0.08);
+  margin-bottom: 1.5rem;
+}
+
+/* Filtros integrados */
+.reservas-admin-container .ra-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid rgba(107, 68, 35, 0.08);
+  background: #faf8f5;
+}
+
+.reservas-admin-container .ra-search-wrap {
+  position: relative;
+  flex: 1 1 220px;
+  max-width: 300px;
+}
+
+.reservas-admin-container .ra-search-icon {
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--stone-gray);
+}
+
+.reservas-admin-container .ra-search-input {
+  width: 100%;
+  padding: 0.45rem 0.7rem 0.45rem 2rem;
+  border: 1.5px solid rgba(107, 68, 35, 0.15);
+  border-radius: 7px;
+  font-size: 0.82rem;
+  background: white;
+  color: var(--dark-brown);
+  box-sizing: border-box;
+}
+
+.reservas-admin-container .ra-search-input:focus {
+  outline: none;
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(193, 123, 74, 0.08);
+}
+
+/* Pills de periodo */
+.reservas-admin-container .ra-period-pills {
+  display: flex;
+  gap: 0.3rem;
+  background: #fff;
+  border: 1.5px solid rgba(107, 68, 35, 0.15);
+  border-radius: 7px;
+  padding: 2px;
+}
+
+.reservas-admin-container .ra-pill {
+  padding: 0.35rem 0.7rem;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--secondary-brown);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reservas-admin-container .ra-pill:hover {
+  background: #faf8f5;
+}
+
+.reservas-admin-container .ra-pill.is-active {
+  background: var(--terracotta);
+  color: #fff;
+}
+
+/* Date / month inputs */
+.reservas-admin-container .ra-date {
+  padding: 0.4rem 0.6rem;
+  border: 1.5px solid rgba(107, 68, 35, 0.15);
+  border-radius: 7px;
+  font-size: 0.82rem;
+  background: white;
+  color: var(--dark-brown);
+  cursor: pointer;
+}
+
+.reservas-admin-container .ra-date:focus {
+  outline: none;
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(193, 123, 74, 0.08);
+}
+
+/* Selects de filtro */
+.reservas-admin-container .ra-filter-select {
+  padding: 0.45rem 1.8rem 0.45rem 0.7rem;
+  border: 1.5px solid rgba(107, 68, 35, 0.15);
+  border-radius: 7px;
+  font-size: 0.82rem;
+  background: white;
+  color: var(--dark-brown);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%23b8b4a9' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+}
+
+.reservas-admin-container .ra-filter-select:focus {
+  outline: none;
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(193, 123, 74, 0.08);
+}
+
+/* Resumen */
+.reservas-admin-container .ra-summary {
+  margin: 0;
+  padding: 0.5rem 1.5rem 0.6rem;
+  font-size: 0.82rem;
+  color: var(--secondary-brown);
+  border-bottom: 1px solid rgba(107, 68, 35, 0.08);
+}
+
+.reservas-admin-container .ra-summary-hint {
+  font-style: italic;
+  opacity: 0.6;
+}
+
+/* Tabla */
+.reservas-admin-container .ra-table-wrap {
+  overflow-x: auto;
+}
+
+.reservas-admin-container .ra-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.reservas-admin-container .ra-table thead tr {
+  border-bottom: 1px solid rgba(107, 68, 35, 0.08);
+}
+
+.reservas-admin-container .ra-table th {
+  text-align: left;
+  padding: 0.75rem 1.25rem;
+  color: var(--secondary-brown);
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.reservas-admin-container .ra-empty-cell {
+  text-align: center;
+  padding: 4rem;
+  color: var(--stone-gray);
+}
+
+.reservas-admin-container .ra-empty-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.reservas-admin-container .ra-row {
+  border-bottom: 1px solid rgba(107, 68, 35, 0.06);
+  transition: background-color 0.15s;
+}
+
+.reservas-admin-container .ra-row:hover {
+  background-color: #faf8f5;
+}
+
+.reservas-admin-container .ra-td {
+  padding: 0.85rem 1.25rem;
+  font-size: 0.88rem;
+  color: var(--charcoal);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.reservas-admin-container .ra-td-fecha {
+  font-weight: 600;
+  color: var(--dark-brown);
+}
+
+.reservas-admin-container .ra-td-hora {
+  font-weight: 600;
+  color: var(--primary-brown);
+  font-family: var(--font-secondary);
+}
+
+.reservas-admin-container .ra-td-cliente {
+  font-weight: 500;
+  color: var(--dark-brown);
+}
+
+.reservas-admin-container .ra-td-caballo {
+  font-weight: 600;
+  color: var(--primary-brown);
+}
+
+.reservas-admin-container .ra-td-muted {
+  color: var(--stone-gray);
+}
+
+.reservas-admin-container .ra-clase-badge {
+  background-color: rgba(193, 123, 74, 0.08);
+  color: var(--primary-brown);
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+/* Badge de tipo */
+.reservas-admin-container .ra-tipo-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: rgba(107, 68, 35, 0.05);
+  color: var(--charcoal);
+}
+
+.reservas-admin-container .ra-tipo-propietario {
+  background: rgba(156, 175, 136, 0.12);
+  color: #5a7a44;
+}
+
+.reservas-admin-container .ra-tipo-renta {
+  background: rgba(193, 123, 74, 0.12);
+  color: #c17b4a;
+}
+
+.reservas-admin-container .ra-tipo-media_renta {
+  background: rgba(212, 165, 116, 0.16);
+  color: #a9743f;
+}
+
+/* Select de estado dentro de la fila */
+.reservas-admin-container .ra-status-select {
+  padding: 0.4rem 0.6rem;
+  border: 1.5px solid;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  background: white;
+}
+
+.reservas-admin-container .ra-status-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(193, 123, 74, 0.08);
+}
