@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react"
 import ReactDOM from "react-dom"
 import "../CSS/Contabilidad.css"
 import LogoutButton from './LogoutBoton'
-import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit, Copy, ChevronLeft, ChevronRight, Users, UserCheck, UserX, PawPrint, GraduationCap, CalendarDays, CalendarPlus, Ban, CalendarCheck, LayoutGrid, BarChart3, ShieldCheck, Home, ArrowRight, Bell } from "lucide-react"
+import { UserPlus, Eye, XCircle, CheckCircle, Loader, Search, History, AlertTriangle, Clock, AlertCircle, Edit, Copy, ChevronLeft, ChevronRight, Users, UserCheck, UserX, PawPrint, GraduationCap, CalendarDays, CalendarPlus, Ban, CalendarCheck, LayoutGrid, BarChart3, Home, ArrowRight, Bell } from "lucide-react"
 import useRoleGuard from '../hooks/useRoleGuard';
 import useAutoRefresh from '../hooks/useAutoRefresh';
 import CaballosAdmin from "./CaballosAdmin";
@@ -15,6 +15,8 @@ import MetricasResumen from "./administrador/MetricasResumen";
 import MetricasCaballos from "./MetricasCaballos";
 import AjusteEspacios from "./administrador/AjusteEspacios";
 import ErrorBoundary from "./ErrorBoundary";
+import InicioPanel from "./administrador/Inicio_panel";
+import logo from "../img/logo.jpeg";
 
 const MembershipAdminDashboard = () => {
   useRoleGuard(['administrador', 'contabilidad']);
@@ -48,6 +50,8 @@ const MembershipAdminDashboard = () => {
   const [creatingClient, setCreatingClient] = useState(false)
   const [paymentCounts, setPaymentCounts] = useState({})
   const [paymentStatus, setPaymentStatus] = useState({})
+  const [availableHorses, setAvailableHorses] = useState(0)
+  const [totalHorses, setTotalHorses] = useState(0)
   const [showOverdueFilter, setShowOverdueFilter] = useState(false)
   const [withoutEmail, setWithoutEmail] = useState(false)
   const [previewCredentials, setPreviewCredentials] = useState({ username: "", password: "" })
@@ -78,7 +82,6 @@ const MembershipAdminDashboard = () => {
   const editFirstInputRef = useRef(null)
   const addFirstInputRef = useRef(null)
   const headerRef = useRef(null)
-  const statsRef = useRef(null)
   const controlsRef = useRef(null)
   const tabsRef = useRef(null)
 
@@ -264,6 +267,22 @@ const MembershipAdminDashboard = () => {
     }, 4000) // Ocultar después de 4 segundos
   }
 
+  // Función para cargar la cantidad de caballos disponibles
+  const loadAvailableHorses = useCallback(async () => {
+    try {
+      const response = await fetch("https://elrefugiocountryclub.com/api/api/caballos")
+      if (response.ok) {
+        const caballos = await response.json()
+        const lista = Array.isArray(caballos) ? caballos : []
+        const disponibles = lista.filter((c) => c.disponibilidad === "disponible").length
+        setAvailableHorses(disponibles)
+        setTotalHorses(lista.length)
+      }
+    } catch (error) {
+      console.error("Error cargando caballos disponibles:", error)
+    }
+  }, [])
+
   // Función para cargar conteo de pagos
   const loadPaymentCounts = useCallback(async () => {
     try {
@@ -371,6 +390,7 @@ const MembershipAdminDashboard = () => {
             rol: u.rol || "",
             tipo_nivel: u.tipo_nivel || "",
             permite_reserva_semanal: Number(u.permite_reserva_semanal) === 1,
+            fechaRegistro: u.fecha_registro || "",
           };
         })
         setMembers(mapped)
@@ -384,13 +404,14 @@ const MembershipAdminDashboard = () => {
 
   // Función que refresca todos los datos de contabilidad
   const refreshAllData = useCallback(async () => {
-    await Promise.all([refreshUsersList(true), loadPaymentCounts(), loadPaymentStatus()])
-  }, [refreshUsersList, loadPaymentCounts, loadPaymentStatus])
+    await Promise.all([refreshUsersList(true), loadPaymentCounts(), loadPaymentStatus(), loadAvailableHorses()])
+  }, [refreshUsersList, loadPaymentCounts, loadPaymentStatus, loadAvailableHorses])
 
   useEffect(() => {
     refreshUsersList()
     loadPaymentCounts()
     loadPaymentStatus()
+    loadAvailableHorses()
   }, [])
 
   const anyModalOpen = modalOpen || addClientModalOpen || paymentHistoryModalOpen || editPaymentModalOpen
@@ -1055,6 +1076,19 @@ const MembershipAdminDashboard = () => {
   const overdueCount = clientMembers.filter((m) => paymentStatus[m.id]?.estado_pago === "vencido").length
   const soonCount = clientMembers.filter((m) => paymentStatus[m.id]?.estado_pago === "proximo_vencer").length
 
+  // Crecimiento real de clientes: registros nuevos este mes vs. base al cierre del mes anterior
+  const clientsGrowthPct = (() => {
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+    const base = clientMembers.filter((m) => {
+      const fr = m.fechaRegistro ? new Date(m.fechaRegistro) : null
+      return fr && !isNaN(fr.getTime()) && fr < startOfMonth
+    }).length
+    const current = totalUsers
+    if (base === 0) return current > 0 ? 100 : 0
+    return Math.round(((current - base) / base) * 1000) / 10
+  })()
+
   const renderPortal = (node) => ReactDOM.createPortal(node, document.body)
 
   return (
@@ -1062,7 +1096,7 @@ const MembershipAdminDashboard = () => {
       {/* SIDEBAR DE NAVEGACIÓN */}
       <aside className="admin-sidebar" ref={tabsRef}>
         <div className="admin-sidebar-brand">
-          <div className="admin-sidebar-logo"><ShieldCheck size={22} /></div>
+          <div className="admin-sidebar-logo"><img src={logo} alt="El Refugio" className="admin-sidebar-logo-img" /></div>
           <div className="admin-sidebar-brand-text">
             <span className="admin-sidebar-brand-name">El Refugio</span>
             <span className="admin-sidebar-brand-role">Administración</span>
@@ -1106,125 +1140,27 @@ const MembershipAdminDashboard = () => {
           </div>
         )}
       </aside>
-
       {/* ÁREA PRINCIPAL */}
       <div className="admin-main">
 
       {/* CONTENIDO DE INICIO */}
       {activeTab === "inicio" && (
-        <div className="tab-content tab-content-visible">
-          {/* TOPBAR - solo en Inicio */}
-          <div ref={headerRef} className="admin-topbar">
-            <div className="admin-header-left">
-              <h1 className="admin-header-title">Panel de Administrador</h1>
-              <p className="admin-header-sub">Gestiona usuarios y membresías de tu plataforma</p>
-            </div>
-            <div className="admin-header-right">
-              <button className="add-client-btn" onClick={openAddClientModal} type="button">
-                <UserPlus size={18} /> Nuevo Cliente
-              </button>
-            </div>
-          </div>
-
-          {/* Bienvenida */}
-          <div className="home-welcome">
-            <div className="home-welcome-text">
-              <h2 className="home-welcome-title">
-                ¡Hola{currentUser?.nombre ? `, ${currentUser.nombre}` : ''}! 👋
-              </h2>
-              <p className="home-welcome-sub">Este es el resumen general de tu club.</p>
-            </div>
-          </div>
-
-          {/* KPIs */}
-          <div ref={statsRef} className="admin-stats-band">
-            <div className="admin-stat-card admin-stat-card-total">
-              <div className="admin-stat-icon"><Users size={22} /></div>
-              <div className="admin-stat-text">
-                <span className="admin-stat-number">{totalUsers}</span>
-                <span className="admin-stat-label">Clientes totales</span>
-              </div>
-            </div>
-            <div className="admin-stat-card admin-stat-card-active">
-              <div className="admin-stat-icon"><UserCheck size={22} /></div>
-              <div className="admin-stat-text">
-                <span className="admin-stat-number">{activeUsers}</span>
-                <span className="admin-stat-label">Activos</span>
-              </div>
-            </div>
-            <div className="admin-stat-card admin-stat-card-blocked">
-              <div className="admin-stat-icon"><UserX size={22} /></div>
-              <div className="admin-stat-text">
-                <span className="admin-stat-number">{blockedUsers}</span>
-                <span className="admin-stat-label">Bloqueados</span>
-              </div>
-            </div>
-            <div className="admin-stat-card admin-stat-card-pending">
-              <div className="admin-stat-icon"><Clock size={22} /></div>
-              <div className="admin-stat-text">
-                <span className="admin-stat-number">{pendingUsers}</span>
-                <span className="admin-stat-label">Pendientes</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Alertas de pago */}
-          <h3 className="home-section-title"><Bell size={16} /> Alertas de pago</h3>
-          <div className="home-alerts-grid">
-            <button
-              className="home-alert-card home-alert-overdue"
-              onClick={() => { setActiveTab('clientes'); setShowOverdueFilter(true); }}
-              type="button"
-            >
-              <div className="home-alert-icon"><AlertTriangle size={22} /></div>
-              <div className="home-alert-body">
-                <span className="home-alert-number">{overdueCount}</span>
-                <span className="home-alert-label">Pagos vencidos</span>
-              </div>
-              <ArrowRight size={18} className="home-alert-arrow" />
-            </button>
-            <button
-              className="home-alert-card home-alert-soon"
-              onClick={() => setActiveTab('clientes')}
-              type="button"
-            >
-              <div className="home-alert-icon"><Clock size={22} /></div>
-              <div className="home-alert-body">
-                <span className="home-alert-number">{soonCount}</span>
-                <span className="home-alert-label">Próximos a vencer</span>
-              </div>
-              <ArrowRight size={18} className="home-alert-arrow" />
-            </button>
-          </div>
-
-          {/* Accesos rápidos */}
-          <h3 className="home-section-title"><LayoutGrid size={16} /> Accesos rápidos</h3>
-          <div className="home-quick-grid">
-            {[
-              { key: 'clientes', label: 'Clientes', icon: Users },
-              { key: 'reservas', label: 'Reservas', icon: CalendarDays },
-              { key: 'caballos', label: 'Caballos', icon: PawPrint },
-              { key: 'instructoras', label: 'Instructoras', icon: GraduationCap },
-              { key: 'disponibilidad', label: 'Disponibilidad', icon: CalendarCheck },
-              { key: 'metricas', label: 'Métricas', icon: BarChart3 },
-              { key: 'metricascab', label: 'Métricas Caballos', icon: BarChart3 }
-            ].map(q => {
-              const QIcon = q.icon
-              return (
-                <button
-                  key={q.key}
-                  className="home-quick-card"
-                  onClick={() => setActiveTab(q.key)}
-                  type="button"
-                >
-                  <span className="home-quick-icon"><QIcon size={22} /></span>
-                  <span className="home-quick-label">{q.label}</span>
-                  <ArrowRight size={16} className="home-quick-arrow" />
-                </button>
-              )
-            })}
-          </div>
-        </div>
+        <InicioPanel
+          headerRef={headerRef}
+          currentUser={currentUser}
+          totalUsers={totalUsers}
+          availableHorses={availableHorses}
+          totalHorses={totalHorses}
+          clientsGrowthPct={clientsGrowthPct}
+          activeUsers={activeUsers}
+          blockedUsers={blockedUsers}
+          pendingUsers={pendingUsers}
+          overdueCount={overdueCount}
+          soonCount={soonCount}
+          setActiveTab={setActiveTab}
+          setShowOverdueFilter={setShowOverdueFilter}
+          openAddClientModal={openAddClientModal}
+        />
       )}
 
       {/* CONTENIDO DE CLIENTES */}

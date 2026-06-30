@@ -89,4 +89,88 @@ router.get('/caballos', async (req, res) => {
   }
 });
 
+// GET /api/metricas/inicio
+// Datos agregados (reales) para las gráficas del panel de inicio del admin.
+router.get('/inicio', async (req, res) => {
+  try {
+    const hoy = new Date();
+
+    // 1) Reservas de los últimos 7 días (por día)
+    const [reservasDia] = await db.query(`
+      SELECT DATE(fecha) AS f, COUNT(*) AS total
+      FROM reservas
+      WHERE estatus NOT LIKE 'cancelada%'
+        AND fecha >= (CURDATE() - INTERVAL 6 DAY) AND fecha <= CURDATE()
+      GROUP BY DATE(fecha)
+    `);
+    const mapDia = new Map(reservasDia.map(r => [String(r.f).slice(0, 10), Number(r.total)]));
+    const diasLabels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const reservas_semana = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - i);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      reservas_semana.push({ dia: diasLabels[d.getDay()], total: mapDia.get(key) || 0 });
+    }
+
+    // 2) Clases impartidas por instructora (mes en curso)
+    const [instructoras] = await db.query(`
+      SELECT CONCAT(i.nombre, ' ', COALESCE(i.apellido, '')) AS nombre, COUNT(r.id) AS total
+      FROM instructoras i
+      LEFT JOIN reservas r ON r.instructora_id = i.id
+        AND r.estatus = 'completada'
+        AND r.fecha >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+      GROUP BY i.id
+      ORDER BY total DESC
+      LIMIT 6
+    `);
+
+    // 3) Disponibilidad de caballos
+    const [[disp]] = await db.query(`
+      SELECT SUM(disponibilidad = 'disponible') AS disponibles, COUNT(*) AS total
+      FROM caballos
+    `);
+
+    // 4) Tendencia de reservas (últimos 6 meses)
+    const [tendRows] = await db.query(`
+      SELECT DATE_FORMAT(fecha, '%Y-%m') AS ym, COUNT(*) AS total
+      FROM reservas
+      WHERE estatus NOT LIKE 'cancelada%'
+        AND fecha >= DATE_FORMAT((CURDATE() - INTERVAL 5 MONTH), '%Y-%m-01')
+      GROUP BY ym
+    `);
+    const mapTend = new Map(tendRows.map(r => [r.ym, Number(r.total)]));
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const tendencia = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+      const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      tendencia.push({ mes: meses[d.getMonth()], total: mapTend.get(ym) || 0 });
+    }
+
+    // 5) Ranking de caballos más utilizados
+    const [caballosRanking] = await db.query(`
+      SELECT c.nombre, COUNT(r.id) AS salidas
+      FROM caballos c
+      LEFT JOIN reservas r ON r.caballo_id = c.id AND r.estatus IN ('confirmada', 'completada')
+      GROUP BY c.id
+      ORDER BY salidas DESC
+      LIMIT 5
+    `);
+
+    res.json({
+      reservas_semana,
+      instructoras: instructoras.map(i => ({ nombre: (i.nombre || '').trim(), total: Number(i.total) })),
+      disponibilidad: {
+        disponibles: Number(disp.disponibles) || 0,
+        total: Number(disp.total) || 0
+      },
+      tendencia,
+      caballos_ranking: caballosRanking.map(c => ({ nombre: c.nombre, salidas: Number(c.salidas) }))
+    });
+  } catch (err) {
+    console.error('Error obteniendo métricas de inicio:', err);
+    res.status(500).json({ error: 'Error obteniendo métricas de inicio' });
+  }
+});
+
 export default router;
